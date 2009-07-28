@@ -119,21 +119,20 @@ class Mango implements Mango_Interface {
 		if(self::$_config === NULL)
 		{
 			// load config
-			self::$_config = Kohana::config('mango');
+			self::$_config = Kohana::config('mangoCTI');
 		}
 
-		if (is_array($id) && isset(self::$_config['cti']))
+		if (is_array($id))
 		{
-echo Kohana::debug(self::$_config['cti']);
 			// object might be extended - read for extension data
-			while(isset(self::$_config['cti'][$object_name]))
+			while(isset(self::$_config[$object_name]))
 			{
-				$type_key = key(self::$_config['cti'][$object_name]);
+				$type_key = key(self::$_config[$object_name]);
 
-				if (isset($id[$type_key]) && isset(self::$_config['cti'][$object_name][$type_key][$id[$type_key]]))
+				if (isset($id[$type_key]) && isset(self::$_config[$object_name][$type_key][$id[$type_key]]))
 				{
 					// extension found - update model_name
-					$object_name = self::$_config['cti'][$object_name][$type_key][$id[$type_key]];
+					$object_name = self::$_config[$object_name][$type_key][$id[$type_key]];
 				}
 				else
 				{
@@ -213,7 +212,7 @@ echo Kohana::debug(self::$_config['cti']);
 
 	// Update columns/relationships during initialization
 	// Primary used in inheritance patterns
-	protected function _set_model_definition(array $definition = NULL)
+	protected function _set_model_definition(array $definition)
 	{
 		if(isset($definition['_columns']))
 		{
