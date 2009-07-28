@@ -124,6 +124,7 @@ class Mango implements Mango_Interface {
 
 		if (is_array($id) && isset(self::$_config['cti']))
 		{
+echo Kohana::debug(self::$_config['cti']);
 			// object might be extended - read for extension data
 			while(isset(self::$_config['cti'][$object_name]))
 			{

@@ -3,7 +3,9 @@
 return array(
 
 	// Inheritance data
-	'cti' => array(
+	'cti' => array()
+		
+	/*'cti' => array(
 		'car' =>  array(
 			'car_type' => array(
 				1 => 'Spyker',
@@ -13,7 +15,8 @@ return array(
 		// you could specify even further extension
 		// (extension of extension) using the same pattern
 		// 'spyker' => array( etc
-	)
+	)*/
+
 );
 
 
