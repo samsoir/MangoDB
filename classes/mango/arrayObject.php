@@ -32,7 +32,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 
 	public function load_type($value)
 	{
-		$type_hint = $this->_type_hint === NULL && is_array($value) ? $this->type_hint($value) : $this->_type_hint;
+		$type_hint = $this->_type_hint === 'auto' && is_array($value) ? $this->type_hint($value) : $this->_type_hint;
 
 		if($type_hint !== NULL)
 		{
