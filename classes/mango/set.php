@@ -39,7 +39,7 @@ class Mango_Set extends Mango_ArrayObject {
 
 			if($update === FALSE)
 			{
-				return array(arr::path_set($prefix,$changed));
+				return arr::path_set($prefix,$changed);
 			}
 			elseif (count($this->_changed) > 1)
 			{

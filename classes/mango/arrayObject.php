@@ -153,7 +153,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 	}
 
-	// lookup a dot notated key string in a multi dimensional array
+	// lookup a / notated key string in a multi dimensional array
 	public function locate($key)
 	{
 		if(is_string($key))

@@ -28,13 +28,15 @@ class Mango_Array extends Mango_ArrayObject {
 
 				$value = $value instanceof Mango_Interface ? $value->as_array() : $value;
 
+				$path = array_merge($prefix,array($key));
+
 				if($update)
 				{
-					$changed = arr::merge($changed, array( '$set' => array( implode('.',$prefix) . '.' . $key => $value) ) );
+					$changed = arr::merge($changed, array( '$set' => array( implode('.',$path) => $value) ) );
 				}
 				else
 				{
-					$changed = arr::merge($changed, arr::path_set($prefix,$value) );
+					$changed = arr::merge($changed, arr::path_set($path,$value) );
 				}
 			}
 			elseif ($value instanceof Mango_Interface)
