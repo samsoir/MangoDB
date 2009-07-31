@@ -403,7 +403,7 @@ class Mango implements Mango_Interface {
 					$validate->rule($column_name,'is_int');
 				break;
 				case 'set':
-					$validate->rules($column_name,'is_array');
+					$validate->rule($column_name,'is_array');
 				break;
 			}
 
