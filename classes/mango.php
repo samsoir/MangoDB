@@ -113,8 +113,15 @@ class Mango implements Mango_Interface {
 	// Mango config data
 	protected static $_config;
 
-	// Factory
-	public static function factory($object_name,$id = NULL)
+	/*
+	 * Mango Object Factory
+	 *
+	 * @param string    Object name
+	 * @param mixed     Array of values or unique ID data
+	 * @param boolean   Use array of values ($id) only to determine and load extended model 
+	 *                  - do not load values themselves (returns empty, but extended model)
+	 */
+	public static function factory($object_name, $id = NULL, $extend_only = FALSE)
 	{
 		if(self::$_config === NULL)
 		{
@@ -139,6 +146,11 @@ class Mango implements Mango_Interface {
 					break;
 				}
 			}
+		}
+
+		if($extend_only)
+		{
+			$id = NULL;
 		}
 
 		$model = 'Model_' . ucfirst($object_name);

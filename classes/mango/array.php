@@ -65,7 +65,6 @@ class Mango_Array extends Mango_ArrayObject {
 	{
 		$array = parent::as_array();
 
-		// TODO set MongoEmptyObj (need new driver)
-		return count($array) ? $array : NULL; //new MongoEmptyObj;
+		return count($array) ? $array : new MongoEmptyObj;
 	}
 }
