@@ -61,9 +61,9 @@ class Mango_Array extends Mango_ArrayObject {
 		$this->_changed[$index] = FALSE;
 	}
 
-	public function as_array()
+	public function as_array( $__get = FALSE )
 	{
-		$array = parent::as_array();
+		$array = parent::as_array( $__get );
 
 		return count($array) ? $array : new MongoEmptyObj;
 	}

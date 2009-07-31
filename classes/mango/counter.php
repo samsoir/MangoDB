@@ -26,7 +26,7 @@ class Mango_Counter implements Mango_Interface {
 		$this->_changed -= $value;
 	}
 
-	public function as_array()
+	public function as_array( $__get = FALSE )
 	{
 		return $this->_value;
 	}

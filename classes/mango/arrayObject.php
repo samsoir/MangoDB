@@ -68,7 +68,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $this->as_array();
 	}
 
-	public function as_array()
+	public function as_array( $__get = FALSE )
 	{
 		$array = parent::getArrayCopy();
 	
@@ -76,7 +76,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		{
 			if ($value instanceof Mango_Interface)
 			{
-				$value = $value->as_array();
+				$value = $value->as_array( $__get );
 			}
 		}
 		
@@ -153,6 +153,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 	}
 
+	// lookup a dot notated key string in a multi dimensional array
 	public function locate($key)
 	{
 		if(is_string($key))
@@ -166,7 +167,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		{
 			if(count($key))
 			{
-				return $this[$next] instanceof Mango_ArrayObject ? $this[$next]->locate($key) : FALSE;
+				return $this[$next] instanceof Mango_ArrayObject ? $this[$next]->locate($key) : NULL;
 			}
 			else
 			{
