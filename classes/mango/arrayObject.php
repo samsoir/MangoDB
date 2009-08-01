@@ -100,6 +100,24 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	{
 		$newval = $this->load_type($newval);
 
+		if($index !== NULL && $this->offsetExists($index))
+		{
+			$current = $this->offsetGet($index);
+
+			if($current === $value)
+			{
+				return $index;
+			}
+			elseif ($value instanceof Mango_Interface && $current instanceof Mango_Interface && $value->as_array() === $current->as_array())
+			{
+				return $index;
+			}
+			elseif ($value instanceof MongoId && $current instanceof MongoId && (string) $value === (string) $current)
+			{
+				return $index;
+			}
+		}
+
 		parent::offsetSet($index,$newval);
 
 		// on $array[], the $index value === NULL
