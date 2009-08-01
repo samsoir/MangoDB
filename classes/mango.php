@@ -761,6 +761,10 @@ class Mango implements Mango_Interface {
 					return;
 				}
 			}
+			else if($value === NULL)
+			{
+				return;
+			}
 
 			// update object
 			$this->_object[$column] = $value === NULL ? NULL : $this->load_type($column,$value);
