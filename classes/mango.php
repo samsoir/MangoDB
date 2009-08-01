@@ -313,8 +313,7 @@ class Mango implements Mango_Interface {
 			}
 
 			// prepare prefix
-			$level = $prefix;
-			$level[] = $column_name;
+			$path = array_merge($prefix,array($column_name));
 
 			if (isset($this->_changed[$column_name]))
 			{
@@ -326,11 +325,11 @@ class Mango implements Mango_Interface {
 
 				if($update)
 				{
-					$changed = arr::merge($changed,array('$set'=>array( implode('.',$level) => $value) ) );
+					$changed = arr::merge($changed,array('$set'=>array( implode('.',$path) => $value) ) );
 				}
 				else
 				{
-					$changed = arr::merge($changed, arr::path_set($level,$value) );
+					$changed = arr::merge($changed, arr::path_set($path,$value) );
 				}
 			}
 			elseif ($this->__isset($column_name))
@@ -338,7 +337,7 @@ class Mango implements Mango_Interface {
 				// check any (embedded) objects/arrays/sets
 				if($value instanceof Mango_Interface)
 				{
-					$changed = arr::merge($changed, $value->get_changed($update,$level));
+					$changed = arr::merge($changed, $value->get_changed($update,$path));
 				}
 			}
 		}

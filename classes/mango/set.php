@@ -55,14 +55,11 @@ class Mango_Set extends Mango_ArrayObject {
 			$changed = array();
 			
 			// if nothing is pushed or pulled, we support $set
-			
-			$level = $prefix;
 			foreach($this as $key => $value)
 			{
 				if($value instanceof Mango_Interface)
 				{
-					$level[] = $key;
-					$changed = arr::merge($changed, $value->get_changed($update, $level));
+					$changed = arr::merge($changed, $value->get_changed($update, array_merge($prefix,array($key))));
 				}
 			}
 
