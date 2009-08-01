@@ -781,7 +781,7 @@ class Mango implements Mango_Interface {
 				}
 			break;
 			case 'enum':
-				if(is_int($value))
+				if(is_numeric($value) && (int) $value == $value)
 				{
 					$value = isset($column_data['values'][$value]) ? $value : NULL;
 				}
