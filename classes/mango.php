@@ -433,7 +433,7 @@ class Mango implements Mango_Interface {
 			{
 				if( ($value === NULL || $value === '') AND ! $this->__isset($column))
 				{
-					// don't set empty values
+					// don't set empty values that were empty to begin with
 					continue;
 				}
 
@@ -738,6 +738,30 @@ class Mango implements Mango_Interface {
 	{
 		if (isset($this->_columns[$column]))
 		{
+			if($value !== NULL)
+			{
+				$value = $this->load_type($column,$value);
+			}
+
+			// do not update value if value is the same
+			if(isset($this->_object[$column]))
+			{
+				$current = $this->_object[$column];
+
+				if($current === $value)
+				{
+					return;
+				}
+				elseif ($value instanceof Mango_Interface && $current instanceof Mango_Interface && $value->as_array() === $current->as_array())
+				{
+					return;
+				}
+				elseif ($value instanceof MongoId && $current instanceof MongoId && (string) $value === (string) $current)
+				{
+					return;
+				}
+			}
+
 			// update object
 			$this->_object[$column] = $value === NULL ? NULL : $this->load_type($column,$value);
 
