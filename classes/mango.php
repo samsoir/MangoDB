@@ -863,7 +863,6 @@ class Mango implements Mango_Interface {
 				$value = is_numeric($value) ? new Mango_Counter($value) : NULL;
 			break;
 			case 'array':
-				echo 'loading array for '. $column . ' to ' . Kohana::debug($value) . '<br>';
 				$value = is_array($value) ? new Mango_Array($value, isset($column_data['type_hint']) ? $column_data['type_hint'] : NULL) : NULL;
 			break;
 			case 'set':
