@@ -93,8 +93,11 @@ class Mango_Set extends Mango_ArrayObject {
 
 		$index = parent::offsetSet($index,$newval);
 
-		// when pushing, we store index (we only retrieve actual value upon saving - value might change after being pushed)
-		$this->_changed[] = $index;
+		if($index !== FALSE)
+		{
+			// new value - remember index (fetch actual value on mango_set::get_changed)
+			$this->_changed[] = $index;
+		}
 
 		return TRUE;
 	}

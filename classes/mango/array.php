@@ -50,9 +50,11 @@ class Mango_Array extends Mango_ArrayObject {
 
 	public function offsetSet($index,$newval)
 	{
-		$index = parent::offsetSet($index,$newval);
-
-		$this->_changed[$index] = TRUE;
+		if(($index = parent::offsetSet($index,$newval)) !== FALSE)
+		{
+			// new value - remember change
+			$this->_changed[$index] = TRUE;
+		}
 	}
 
 	public function offsetUnset($index)
