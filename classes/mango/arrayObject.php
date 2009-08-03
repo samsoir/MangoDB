@@ -11,7 +11,10 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 
 		$this->_type_hint = strtolower($type_hint);
 
-		$this->load();
+		if($this->_type_hint !== NULL)
+		{
+			$this->load();
+		}
 	}
 
 	// Implemented by child classes
