@@ -41,8 +41,7 @@ class Mango_Array extends Mango_ArrayObject {
 			}
 			elseif ($value instanceof Mango_Interface)
 			{
-				$prefix[] = $key;
-				$changed = arr::merge($changed, $value->get_changed($update, $prefix));
+				$changed = arr::merge($changed, $value->get_changed($update, array_merge($prefix,array($key))));
 			}
 		}
 
