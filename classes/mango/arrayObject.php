@@ -81,7 +81,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $this->as_array();
 	}
 
-	public function as_array( $__get = FALSE )
+	public function as_array( $debug = FALSE )
 	{
 		$array = parent::getArrayCopy();
 
@@ -89,7 +89,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		{
 			if ($value instanceof Mango_Interface)
 			{
-				$value = $value->as_array( $__get );
+				$value = $value->as_array( $debug );
 			}
 		}
 		

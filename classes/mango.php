@@ -349,13 +349,13 @@ class Mango implements Mango_Interface {
 	 *
 	 * @param boolean    actively call __get to fetch data instead of reading from _object array
 	 */
-	public function as_array( $__get = FALSE )
+	public function as_array( $debug = FALSE )
 	{
 		$array = array();
 
 		foreach($this->_object as $column_name => $value)
 		{
-			$array[$column_name] = $value instanceof Mango_Interface ? $value->as_array( $__get ) : ($__get ? $this->__get($column_name) : $value);
+			$array[$column_name] = $value instanceof Mango_Interface ? $value->as_array( $debug ) : ($debug ? $this->__get($column_name) : $value);
 		}
 
 		return $array;
