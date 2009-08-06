@@ -210,7 +210,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	}
 
 	// lookup a / notated key string in a multi dimensional array
-	public function locate($key)
+	public function locate($key,$default = NULL)
 	{
 		if(is_string($key))
 		{
@@ -232,7 +232,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 		else
 		{
-			return NULL;
+			return $default;
 		}
 	}
 }
