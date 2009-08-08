@@ -19,7 +19,7 @@ class Mango_Iterator implements Iterator, Countable {
 		return $this->_cursor;
 	}
 
-	public function as_array()
+	public function as_array( $objects = TRUE )
 	{
 		$array = array();
 
@@ -29,12 +29,41 @@ class Mango_Iterator implements Iterator, Countable {
 			do
 			{
 				$current = $this->current();
-				$array[ (string) $current->_id ] = $current;
+				$array[ (string) $current->_id ] = $objects ? $current : $current->as_array();
 			}
 			while($this->next());
 		}
 
 		return $array;
+	}
+
+	// Return an (associative) array of values
+	// $blog->comments->select_list('id','author');
+	// $blog->comments->select_list('author');
+	public function select_list($key = '_id',$val = NULL)
+	{
+		if($val === NULL)
+		{
+			$val = $key;
+			$key = NULL;
+		}
+
+		$list = array();
+
+		foreach($this->_cursor as $data)
+		{
+			if($key !== NULL)
+			{
+				echo Kohana::debug($data);
+				$list[(string) $data[$key]] = $data[$val];
+			}
+			else
+			{
+				$list[] = $data[$val];
+			}
+		}
+
+		return $list;
 	}
 
 	/**

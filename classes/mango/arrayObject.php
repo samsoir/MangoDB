@@ -235,4 +235,33 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			return $default;
 		}
 	}
+
+	// Return an (associative) array of values
+	// $blog->comments->select_list('id','author');
+	// $blog->comments->select_list('author');
+	public function select_list($key = 'id',$val = NULL)
+	{
+		if($val === NULL)
+		{
+			$val = $key;
+			$key = NULL;
+		}
+
+		$list = array();
+
+		foreach($this as $object)
+		{
+			if($key !== NULL)
+			{
+				$list[$object->$key] = $object->$val;
+			}
+			else
+			{
+				$list[] = $object->$val;
+			}
+		}
+
+		return $list;
+	}
+
 }
