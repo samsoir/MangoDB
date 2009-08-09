@@ -123,9 +123,12 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 				case 'set':
 					$value = new Mango_Array(array(),$this->_type_hint);
 				break;
+				case 'counter':
+					$value = new Mango_Counter;
+				break;
 				default:
 					// implicit set is only possible when we know the array type.
-					throw new Kohana_Exception('Set typehint to \'set\' or \'array\' (now: :typehint) to support implicit array creation', 
+					throw new Kohana_Exception('Set typehint to \'set\', \'array\' or \'counter\' (now: :typehint) to support implicit array creation', 
 						array(':typehint' => $this->_type_hint ? '\''.$this->_type_hint.'\'' : 'not set'));
 			}
 			parent::offsetSet($index,$value);
