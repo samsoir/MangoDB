@@ -626,13 +626,15 @@ class Mango implements Mango_Interface {
 		if(in_array($object_plural,$this->_has_and_belongs_to_many))
 		{
 			$column = $object_plural . '_ids';
+			$value = $model->_id;
 		}
 		elseif ( isset($this->_columns[$object_plural]) && $this->_columns[$object_plural]['type'] === 'has_many' )
 		{
 			$column = $object_plural;
+			$value = $model;
 		}
 
-		return isset($column) ? ($this->__isset($column) ? $this->__get($column)->find($model) !== FALSE : FALSE) : FALSE;
+		return isset($column) ? ($this->__isset($column) ? $this->__get($column)->find($value) !== FALSE : FALSE) : FALSE;
 	}
 
 	public function add(Mango $model, $returned = FALSE)
