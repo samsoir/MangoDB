@@ -172,16 +172,27 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 
 	public function find($needle)
 	{
-		echo Kohana::debug('finding',$needle);
-
-		if($needle instanceof Mango_Interface)
+		if ($needle instanceof Mango_Interface)
 		{
 			$needle = $needle->as_array();
+		}
+		elseif ($needle instanceof MongoId)
+		{
+			$needle = (string)$needle;
 		}
 
 		foreach($this as $key => $val)
 		{
-			if( ($val instanceof Mango_Interface && $val->as_array() === $needle) || ($val == $needle))
+			if ($val instanceof Mango_Interface)
+			{
+				$val = $val->as_array();
+			}
+			elseif ($val instanceof MongoId)
+			{
+				$val = (string) $val;
+			}
+
+			if ($val === $needle)
 			{
 				return $key;
 			}
