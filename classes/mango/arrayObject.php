@@ -92,7 +92,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 				$value = $value->as_array( $debug );
 			}
 		}
-		
+
 		return $array;
 	}
 
