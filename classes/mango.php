@@ -358,7 +358,7 @@ class Mango implements Mango_Interface {
 			$array[$column_name] = $value instanceof Mango_Interface ? $value->as_array( $debug ) : ($debug ? $this->__get($column_name) : $value);
 		}
 
-		return $array;
+		return count($array) || $debug ? $array : new MongoEmptyObj;
 	}
 
 	// Set status to saved and empties changed array
@@ -1007,6 +1007,21 @@ class Mango implements Mango_Interface {
 		// no support for $unset yet, now setting to NULL (if value was set)
 		if($this->__isset($column))
 		{
+			switch($this->_columns[$column]['type'])
+			{
+				case 'has_one':
+					$value = Mango::factory($column);
+				break;
+				case 'has_many':
+				case 'array':
+				case 'set':
+					$value = array();
+				break;
+				default:
+					$value = NULL;
+				break;
+			}
+
 			$this->__set($column,NULL);
 		}
 	}
