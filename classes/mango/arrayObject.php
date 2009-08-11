@@ -5,8 +5,17 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	protected $_changed = array();
 	protected $_type_hint;
 
-	public function __construct(array $array = array(),$type_hint = NULL)
+	public function __construct($array = array(),$type_hint = NULL)
 	{
+		if($array instanceof Mango_ArrayObject)
+		{
+			$array = $array->as_array(TRUE);
+		}
+		elseif (!is_array($array))
+		{
+			$array = array();
+		}
+		
 		parent::__construct($array,ArrayObject::STD_PROP_LIST);
 
 		$this->_type_hint = strtolower($type_hint);

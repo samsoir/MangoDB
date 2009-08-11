@@ -7,6 +7,11 @@ class Mango_Counter implements Mango_Interface {
 	
 	public function __construct($value = NULL, $new = FALSE)
 	{
+		if($value instanceof Mango_Counter)
+		{
+			$value = (string) $value;
+		}
+
 		if(is_numeric($value))
 		{
 			$this->_value = (int) $value;

@@ -852,23 +852,16 @@ class Mango implements Mango_Interface {
 				}
 			break;
 			case 'has_many':
-				if(! is_array($value))
-				{
-					$value = NULL;
-				}
-				else
-				{
-					$value = new Mango_Set($value,inflector::singular($column));
-				}
+				$value = new Mango_Set($value,inflector::singular($column));
 			break;
 			case 'counter':
-				$value = is_numeric($value) ? new Mango_Counter($value) : NULL;
+				$value = new Mango_Counter($value);
 			break;
 			case 'array':
-				$value = is_array($value) ? new Mango_Array($value, isset($column_data['type_hint']) ? $column_data['type_hint'] : NULL) : NULL;
+				$value = new Mango_Array($value, isset($column_data['type_hint']) ? $column_data['type_hint'] : NULL);
 			break;
 			case 'set':
-				$value = is_array($value) ? new Mango_Set($value, isset($column_data['type_hint']) ? $column_data['type_hint'] : NULL) : NULL;
+				$value = new Mango_Set($value, isset($column_data['type_hint']) ? $column_data['type_hint'] : NULL);
 			break;
 		}
 
@@ -1007,21 +1000,6 @@ class Mango implements Mango_Interface {
 		// no support for $unset yet, now setting to NULL (if value was set)
 		if($this->__isset($column))
 		{
-			switch($this->_columns[$column]['type'])
-			{
-				case 'has_one':
-					$value = Mango::factory($column);
-				break;
-				case 'has_many':
-				case 'array':
-				case 'set':
-					$value = array();
-				break;
-				default:
-					$value = NULL;
-				break;
-			}
-
 			$this->__set($column,NULL);
 		}
 	}
