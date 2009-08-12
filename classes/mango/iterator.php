@@ -54,7 +54,6 @@ class Mango_Iterator implements Iterator, Countable {
 		{
 			if($key !== NULL)
 			{
-				echo Kohana::debug($data);
 				$list[(string) $data[$key]] = $data[$val];
 			}
 			else
