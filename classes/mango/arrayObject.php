@@ -62,19 +62,19 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 				}
 				else
 				{
-					$value = new Mango_Counter($value);
+					$value = new Mango_Counter($value,$this->_type_hint);
 				}
 			break;
 			case 'set':
 				if(is_array($value))
 				{
-					$value = new Mango_Set($value);
+					$value = new Mango_Set($value,$this->_type_hint);
 				}
 			break;
 			case 'array':
 				if(is_array($value))
 				{
-					$value = new Mango_Array($value);
+					$value = new Mango_Array($value,$this->_type_hint);
 				}
 			break;
 			default:
@@ -127,20 +127,20 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			switch($this->_type_hint)
 			{
 				case 'array':
-					$value = new Mango_Array(array(),$this->_type_hint);
-				break;
 				case 'set':
-					$value = new Mango_Array(array(),$this->_type_hint);
+					$value = array();
 				break;
 				case 'counter':
-					$value = new Mango_Counter;
+					$value = 0;
 				break;
 				default:
 					// implicit set is only possible when we know the array type.
 					throw new Kohana_Exception('Set typehint to \'set\', \'array\' or \'counter\' (now: :typehint) to support implicit array creation', 
 						array(':typehint' => $this->_type_hint ? '\''.$this->_type_hint.'\'' : 'not set'));
 			}
-			parent::offsetSet($index,$value);
+			// we use parent::offsetSet so no change is recorded
+			// (isset($array[12]) should not create a value at key 12)
+			parent::offsetSet($index,$this->load_type($value));
 		}
 
 		return parent::offsetGet($index);
