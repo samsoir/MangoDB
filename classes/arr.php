@@ -17,12 +17,12 @@ class arr extends kohana_arr {
    * @param   array   array to modify (optional)
 	 * @return  array
 	 */
-	public static function path_set($path,$value, & $array = array())
+	public static function path_set($path,$value, & $array = array(),$delimiter = '.')
 	{
 		if (is_string($path))
 		{
 			// Split the keys by dots
-			$path = explode('.', trim($path, '.'));
+			$path = explode($delimiter, trim($path, $delimiter));
 		}
 
 		$ref_copy =& $array;

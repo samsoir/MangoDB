@@ -740,10 +740,7 @@ class Mango implements Mango_Interface {
 	{
 		if (isset($this->_columns[$column]))
 		{
-			if($value !== NULL)
-			{
-				$value = $this->load_type($column,$value);
-			}
+			$value = $this->load_type($column,$value);
 
 			// do not update value if value is the same
 			if(isset($this->_object[$column]))
