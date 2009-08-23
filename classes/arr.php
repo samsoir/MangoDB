@@ -19,7 +19,7 @@ class arr extends kohana_arr {
 	 */
 	public static function path_set($path,$value, & $array = array(),$delimiter = '.')
 	{
-		if (is_string($path))
+		if ( ! is_array($path))
 		{
 			// Split the keys by dots
 			$path = explode($delimiter, trim($path, $delimiter));
