@@ -79,9 +79,6 @@
  */
 
 // TODOs
-
-// add & test $pull (should be availabe from Mongo 0.9.7)
-// add & test $pushAll / $pullAll (Mongo 1.1.0??)
 // $unset support
 // something script to automatically set proper indexes in mongo (foreign keys / unique keys)
 
@@ -165,7 +162,7 @@ class Mango implements Mango_Interface {
 		if (is_array($id))
 		{
 			// Load an object from array
-			$this->load_values($id);
+			$this->values($id);
 		}
 		elseif (!empty($id))
 		{
@@ -260,7 +257,7 @@ class Mango implements Mango_Interface {
 		{
 			// looking for ID or limiting 1 without sort -> use findOne
 			$values = $this->_db->find_one($this->_collection_name,$criteria,$fields);
-			return $values !== NULL ? $this->load_values($values) : $this->clear();
+			return $values !== NULL ? $this->values($values) : $this->clear();
 		}
 		else
 		{
@@ -572,7 +569,7 @@ class Mango implements Mango_Interface {
 	}
 
 	// Load an array of values into object
-	public function load_values(array $values)
+	public function values(array $values)
 	{
 		if (array_key_exists('_id', $values) || $this->_embedded)
 		{
@@ -614,7 +611,7 @@ class Mango implements Mango_Interface {
 		$values  = array_combine($columns, array_fill(0, count($columns), NULL));
 
 		// Replace the current object with an empty one
-		$this->load_values($values);
+		$this->values($values);
 
 		return $this;
 	}
