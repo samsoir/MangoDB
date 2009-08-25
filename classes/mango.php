@@ -840,7 +840,7 @@ class Mango implements Mango_Interface {
 					$value = Mango::factory($column,$value);
 				}
 				
-				if( ! ($value instanceof Mango) || $value->_object_name !== $column )
+				if( ! ($value instanceof Mango) || ! is_a($value,'Model_' . $column ) )
 				{
 					$value = NULL;
 				}

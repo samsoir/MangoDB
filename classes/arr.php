@@ -48,4 +48,21 @@ class arr extends kohana_arr {
 
 		return $array;
 	}
+
+	// Recursively removes all NULL values from an array
+	public static function filter(array $array)
+	{
+		foreach($array as $key => $value)
+		{
+			if($value === NULL)
+			{
+				unset($array[$key]);
+			}
+			elseif (is_array($value))
+			{
+				$array[$key] = self::filter($value);
+			}
+		}
+		return $array;
+	}
 }
