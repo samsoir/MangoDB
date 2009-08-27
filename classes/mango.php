@@ -616,35 +616,41 @@ class Mango implements Mango_Interface {
 		return $this;
 	}
 
-	public function has(Mango $model)
+	public function has($column_singular,Mango $model = NULL)
 	{
-		$object_plural = $model->_object_plural;
-
-		if(in_array($object_plural,$this->_has_and_belongs_to_many))
+		if($model === NULL)
 		{
-			$column = $object_plural . '_ids';
+			$model = $column_singular;
+			$column_singular = $model->_object_name;
+		}
+
+		$column_plural = Inflector::plural($column_singular);
+
+		if(in_array($column_plural,$this->_has_and_belongs_to_many))
+		{
+			$column = $column_plural . '_ids';
 			$value = $model->_id;
 		}
-		elseif ( isset($this->_columns[$object_plural]) && $this->_columns[$object_plural]['type'] === 'has_many' )
+		elseif(isset($this->_columns[$column_plural]) && $this->_columns[$column_plural]['type'] === 'has_many' )
 		{
-			$column = $object_plural;
+			$column = $column_plural;
 			$value = $model;
 		}
 
 		return isset($column) ? ($this->__isset($column) ? $this->__get($column)->find($value) !== FALSE : FALSE) : FALSE;
 	}
 
-	public function add(Mango $model, $returned = FALSE)
+	public function add($column_singular,Mango $model, $returned = FALSE)
 	{
-		$object_plural = $model->_object_plural;
-
-		if($this->has($model))
+		if($this->has($column_singular,$model))
 		{
 			// already added
 			return TRUE;
 		}
 
-		if(in_array($object_plural,$this->_has_and_belongs_to_many))
+		$column_plural = Inflector::plural($column_singular);
+
+		if(in_array($column_plural,$this->_has_and_belongs_to_many))
 		{
 			if( ! $model->_loaded || ! $this->_loaded )
 				return FALSE;
@@ -655,41 +661,41 @@ class Mango implements Mango_Interface {
 			if($this->__get($column)->push($model->_id))
 			{
 				// push succeed
-				if( isset($this->_related[$object_plural]) )
+				if( isset($this->_related[$column_plural]) )
 				{
 					// Related models have been loaded already, add this one
-					$this->_related[$object_plural][] = $model;
+					$this->_related[$column_plural][] = $model;
 				}
 
 				if( ! $returned )
 				{
 					// add relation to model as well
-					$model->add($this,TRUE);
+					$model->add($column_singular,$this,TRUE);
 				}
 			}
 
 			// model has been added or was already added
 			return TRUE;
 		}
-		elseif ( isset($this->_columns[$object_plural]) && $this->_columns[$object_plural]['type'] === 'has_many' )
+		elseif ( isset($this->_columns[$column_plural]) && $this->_columns[$column_plural]['type'] === 'has_many' )
 		{
-			return $this->__get($object_plural)->push($model);
+			return $this->__get($column_plural)->push($model);
 		}
 		
 		return FALSE;
 	}
 
-	public function remove(Mango $model, $returned = FALSE)
+	public function remove($column_singular,Mango $model, $returned = FALSE)
 	{
-		$object_plural = $model->_object_plural;
-
-		if(! $this->has($model))
+		if(! $this->has($column_singular,$model))
 		{
 			// already removed
 			return TRUE;
 		}
 
-		if(in_array($object_plural,$this->_has_and_belongs_to_many))
+		$column_plural = Inflector::plural($column_singular);
+
+		if(in_array($column_plural,$this->_has_and_belongs_to_many))
 		{
 			if( ! $model->_loaded || ! $this->_loaded )
 				return FALSE;
@@ -700,33 +706,33 @@ class Mango implements Mango_Interface {
 			if($this->__get($column)->pull($model->_id))
 			{
 				// pull succeed
-				if( isset($this->_related[$object_plural]) )
+				if( isset($this->_related[$column_plural]) )
 				{
 					// Related models have been loaded already, remove this one
 					$related = array();
-					foreach($this->_related[$object_plural] as $objecT)
+					foreach($this->_related[$column_plural] as $objecT)
 					{
 						if($object->as_array() !== $model->as_array())
 						{
 							$related[] = $object;
 						}
 					}
-					$this->_related[$object_plural] = $related;
+					$this->_related[$column_plural] = $related;
 				}
 
 				if( ! $returned )
 				{
 					// add relation to model as well
-					$model->remove($this,TRUE);
+					$model->remove($column_singular,$this,TRUE);
 				}
 			}
 
 			// model has been removed or was already removed
 			return TRUE;
 		}
-		elseif ( isset($this->_columns[$object_plural]) && $this->_columns[$object_plural]['type'] === 'has_many' )
+		elseif ( isset($this->_columns[$column_plural]) && $this->_columns[$column_plural]['type'] === 'has_many' )
 		{
-			return $this->__get($object_plural)->pull($model);
+			return $this->__get($column_plural)->pull($model);
 		}
 
 		return FALSE;
@@ -835,18 +841,26 @@ class Mango implements Mango_Interface {
 				$value = (string) $value;
 			break;
 			case 'has_one':
+				$model_name = isset($column_data['type_hint'])
+					? $column_data['type_hint']
+					: $column;
+
 				if(is_array($value))
 				{
-					$value = Mango::factory($column,$value);
+					$value = Mango::factory($model_name, $value);
 				}
-				
-				if( ! ($value instanceof Mango) || ! is_a($value,'Model_' . $column ) )
+
+				if( ! ($value instanceof Mango) || ! is_a($value,'Model_' . $model_name ) )
 				{
 					$value = NULL;
 				}
 			break;
 			case 'has_many':
-				$value = new Mango_Set($value,inflector::singular($column));
+				$model_name = isset($column_data['type_hint']) 
+					? $column_data['type_hint'] 
+					: Inflector::singular($column);
+
+				$value = new Mango_Set($value, $model_name);
 			break;
 			case 'counter':
 				$value = new Mango_Counter($value);
@@ -909,9 +923,11 @@ class Mango implements Mango_Interface {
 				case 'has_one':
 					if($value === NULL)
 					{
-						/*$this->__set($column,Mango::factory($column));
-						$value = $this->_object[$column];*/
-						$value = $this->_object[$column] = Mango::factory($column);
+						$model_name = isset($column_data['type_hint'])
+							? $column_data['type_hint']
+							: $column;
+
+						$value = $this->_object[$column] = Mango::factory($model_name);
 					}
 				break;
 				case 'set':
