@@ -3,6 +3,68 @@
 class arr extends kohana_arr {
 
 	/**
+	 * Gets a value from an array using a dot separated path.
+	 *
+	 *     // Get the value of $array['foo']['bar']
+	 *     $value = Arr::path($array, 'foo.bar');
+	 *
+	 * @param   array   array to search
+	 * @param   string  key path, dot separated
+	 * @param   mixed   default value if the path is not set
+	 * @return  mixed
+	 */
+	public static function path($array, $path, $default = NULL, $delimiter = '.')
+	{
+		// Split the keys by delimiter
+		$keys = is_array($path) ? $path : explode($delimiter, trim($path, $delimiter));
+
+		// Split the keys by slashes
+		//$keys = explode('.', $path);
+
+		do
+		{
+			$key = array_shift($keys);
+
+			if (ctype_digit($key))
+			{
+				// Make the key an integer
+				$key = (int) $key;
+			}
+
+			if (isset($array[$key]))
+			{
+				if ($keys)
+				{
+					if (is_array($array[$key]))
+					{
+						// Dig down into the next part of the path
+						$array = $array[$key];
+					}
+					else
+					{
+						// Unable to dig deeper
+						break;
+					}
+				}
+				else
+				{
+					// Found the path requested
+					return $array[$key];
+				}
+			}
+			else
+			{
+				// Unable to dig deeper
+				break;
+			}
+		}
+		while ($keys);
+
+		// Unable to find the value requested
+		return $default;
+	}
+
+	/**
 	 * Sets a value in an array using a path.
 	 *
 	 *     // Set the value of $array['foo']['bar'] to TRUE

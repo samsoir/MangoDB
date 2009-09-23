@@ -894,7 +894,7 @@ abstract class Mango implements Mango_Interface {
 			// field is required
 			if(isset($field['required']) AND $field['required'] === TRUE)
 			{
-				$data->rule($name,'required');
+				$data->rule($name,'not_empty');
 			}
 
 			// min/max length/value
@@ -935,69 +935,12 @@ abstract class Mango implements Mango_Interface {
 			// belongs to ID field
 			if($relation['type'] === 'belongs_to')
 			{
-				$data->rule($name . '_id','required');
+				$data->rule($name . '_id','not_empty');
 			}
 		}
 
 		return $data;
 	}
-
-	/**
-	 * Add rules to Validate object
-	 *
-	 * @param   Validate  Validate object
-	 * @return  Validate  Validate object with added rules
-	 */
-	/*protected function _check(Validate $data)
-	{
-		foreach ($this->_fields as $name => $field)
-		{
-			switch($field['type'])
-			{
-				case 'enum':
-					$data->rule($name,'in_array',array($field['values']));
-				break;
-				case 'int':
-				case 'float':
-				case 'string':
-				case 'array':
-					$data->rule($name,'is_' . $field['type']);
-				break;
-				case 'boolean':
-					$data->rule($name,'is_bool');
-				break;
-				case 'counter':
-					$data->rule($name,'is_int');
-				break;
-				case 'set':
-					$data->rule($name,'is_array');
-				break;
-			}
-
-			if(isset($field['required']) AND $field['required'] === TRUE)
-			{
-				$data->rule($name,'required');
-			}
-
-			foreach( array('min_value','max_value','min_length','max_length') as $rule)
-			{
-				if(isset($field[$rule]))
-				{
-					$data->rule($name,$rule,array($field[$rule]));
-				}
-			}
-		}
-
-		foreach ($this->_relations as $name => $relation)
-		{
-			if($relation['type'] === 'belongs_to')
-			{
-				$data->rule($name . '_id','required');
-			}
-		}
-
-		return $data;
-	}*/
 
 	/**
 	 * Formats a value into correct a valid value for the specific field
