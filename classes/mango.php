@@ -795,25 +795,6 @@ abstract class Mango implements Mango_Interface {
 	 * @param   boolean  only validate the fields supplied in $data
 	 * @return  array    filtered data
 	 */
-	/*public function check(array $data = NULL)
-	{
-		if($data === NULL)
-		{
-			$data = $this->_object;
-		}
-
-		$data = Validate::factory($data);
-
-		$data = $this->_check($data);
-
-		if ( ! $data->check())
-		{
-			throw new Validate_Exception($data);
-		}
-
-		return $data->as_array();
-	}*/
-
 	public function check(array $data = NULL, $update = FALSE)
 	{
 		if($data === NULL)
