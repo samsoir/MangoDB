@@ -3,14 +3,14 @@
 class Mango_Iterator implements Iterator, Countable {
 
 	// Class attributes
-	protected $_object_name;
+	protected $_model;
 
 	// MongoCursor object
 	protected $_cursor;
 
-	public function __construct($object_name, MongoCursor $cursor)
+	public function __construct($model, MongoCursor $cursor)
 	{
-		$this->_object_name = $object_name;
+		$this->_model = $model;
 		$this->_cursor = $cursor;
 	}
 
@@ -78,7 +78,7 @@ class Mango_Iterator implements Iterator, Countable {
 	 */
 	public function current()
 	{
-		return Mango::factory($this->_object_name,$this->_cursor->current());
+		return Mango::factory($this->_model,$this->_cursor->current(),Mango::CLEAN);
 	}
 
 	/**

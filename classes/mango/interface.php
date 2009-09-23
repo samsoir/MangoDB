@@ -2,9 +2,9 @@
 
 interface Mango_Interface
 {
-	public function as_array( $__get = FALSE );
+	public function as_array( $clean = TRUE );
 	
-	public function get_changed($update, array $prefix = array());
+	public function changed($update, array $prefix = array());
 	
-	public function set_saved();
+	public function saved();
 }

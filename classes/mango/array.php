@@ -2,7 +2,7 @@
 
 class Mango_Array extends Mango_ArrayObject {
 
-	public function get_changed($update, array $prefix = array())
+	public function changed($update, array $prefix = array())
 	{
 		$changed = array();
 
@@ -41,7 +41,7 @@ class Mango_Array extends Mango_ArrayObject {
 			}
 			elseif ($value instanceof Mango_Interface)
 			{
-				$changed = arr::merge($changed, $value->get_changed($update, array_merge($prefix,array($key))));
+				$changed = arr::merge($changed, $value->changed($update, array_merge($prefix,array($key))));
 			}
 		}
 
@@ -64,10 +64,12 @@ class Mango_Array extends Mango_ArrayObject {
 		$this->_changed[$index] = FALSE;
 	}
 
-	public function as_array( $debug = FALSE )
+	public function as_array( $clean = TRUE )
 	{
-		$array = parent::as_array( $debug );
+		$array = parent::as_array( $clean );
 
-		return count($array) || $debug ? $array : new MongoEmptyObj;
+		return $clean && ! count($array) 
+			? new MongoEmptyObj 
+			: $array;
 	}
 }

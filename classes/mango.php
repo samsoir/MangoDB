@@ -1,142 +1,44 @@
 <?php
 
+abstract class Mango implements Mango_Interface {
 
-// PLEASE NOTE THE LIMITATIONS OF THIS LIBRARY (listed below)
-
-
-/* ORM library for MongoDB
- *
- * Supports atomic updates (using $set/$inc/$push etc)
- * Supports embedded objects (has_one and has_many)
- * Supports related objects (has_one, belongs_to, has_many, has_and_belongs_to_many)
- * Supports cascading deletes (if an object is deleted, it's has_one and has_many related objects are removed too)
- * Increment values using the increment() method
- * Manage embedded has_many relations / arrays using the push()/pull()/array_key() methods
- * Manage HABTM relations using the add()/remove()/has() methods
- *
- *
- * This library is supposed to work with Kohana PHP Framework - http://www.kohanaphp.org
- *
- * I took a lot of ideas from Kohana PHP Framework's ORM Library
- * @package    ORM
- * @author     Kohana Team
- * @copyright  (c) 2007-2008 Kohana Team
- * @license    http://kohanaphp.com/license.html
- *
- *
- * For updates / questions / suggestions:
- * 	Kohana Forum: http://forum.kohanaphp.com/comments.php?DiscussionID=2968
- * or
- * 	Mongo List: http://groups.google.com/group/mongodb-user/browse_thread/thread/6d21fa8d818f2966
- * 
- */
-
-
-// LIMITATIONS
-
-/* It is not possible to replicate full RDBMS behaviour in MongoDB - MongoDB != MySQL
-
- * This section will list the limitations
-
- * 1) You cannot add AND remove values from a set (set column type, embedded has_many relation, has_and_belongs_to_many relation)
- *    at the same time
- *    This is ok:
- *    $blog->posts[] = $post;
- *    $blog->posts[] = $post2;
- *    $blog->save();
- *    This is not ok!:
- *    $blog->posts[] = $post1;
- *    unset($blog->posts[1]); // this won't be removed because we are already adding
- *    $blog->save();
-
- * 2) If an value is pushed to/pulled from an array, you CANNOT edit anything else in that array
- *    Mongo does not support $set and $push/$pull modifiers accessing the same array.
- *    This is ok (assuming posts are embedded):
- *      $blog->time = time()
- *      $blog->posts[] = $post;
- *      $blog->save();
- *    This is not ok!
- *      $posts = $blog->posts;
- *      $posts[0]->text = 'editing some existing post'; // this won't be saved
- *      $posts[] = $post2;
- *      $blog->save();
- *    This is ok though:
- *      $blog->posts[0]->text = 'editing some existing post';
- *      $blog->save();
- *    As is this:
- *      $blog->posts = array($post1,$post2);
- *      $blog->save();
- *    Although this is not atomic, because this will reset the array completely instead of adding
- *    only the new posts
-
- * 3) Always run save() after your edits. Only when you save, things are actually written to the DB.
- *    When adding/removing HABTM relations, you also have to save the added/removed object:
- *    $blog->add($manager);
- *    $blog->save();
- *    $manager->save();
-
- * 4) You cannot run modifiers on indexed fields. This should be fixed from 1.1.0
- */
-
-// TODOs
-// $unset support
-// something script to automatically set proper indexes in mongo (foreign keys / unique keys)
-
-class Mango implements Mango_Interface {
-
-	// Object information
-	protected $_columns = array();
-	protected $_embedded = FALSE;
-	protected $_collection_name;
-	protected $_db = 'default';
-
-	// define relations
-	protected $_has_one = array();
-	protected $_has_many = array();
-	protected $_belongs_to = array();
-	protected $_has_and_belongs_to_many = array();
-
-	// Current object
-	protected $_object  = array();
-	protected $_related = array();
-	protected $_changed = array();
-	protected $_loaded  = FALSE;
-	protected $_saved   = FALSE;
-
-	// Object information
-	protected $_object_name;
-	protected $_object_plural;
-
-	// Mango config data
-	protected static $_config;
-
-	/*
-	 * Mango Object Factory
-	 *
-	 * @param string    Object name
-	 * @param mixed     Array of values or unique ID data
-	 * @param boolean   Use array of values ($id) only to determine and load extended model 
-	 *                  - do not load values themselves (returns empty, but extended model)
+	/**
+	 * @var  array  Extension config
 	 */
-	public static function factory($object_name, $id = NULL, $extend_only = FALSE)
+	protected static $_cti;
+
+	const CHANGE   = 0; // Pushes values into model - trigger changes (default)
+	const EXTEND   = 1; // Returns empty model - only uses values to detect possible extension
+	const CLEAN    = 2; // Pushes values into model - doesn't trigger changes
+
+	/**
+	 * Load an Mango model.
+	 *
+	 * @param   string  model name
+	 * @param   array   values to pre-populate the model
+	 * @param   boolean use values to extend only, don't prepopulate model
+	 * @return  Mango
+	 */
+	public static function factory($name, array $values = NULL, $load_type = 0)
 	{
-		if(self::$_config === NULL)
-		{
-			// load config
-			self::$_config = Kohana::config('mangoCTI');
-		}
+		static $models;
 
-		if (is_array($id))
+		if ($values)
 		{
-			// object might be extended - read for extension data
-			while(isset(self::$_config[$object_name]))
+			if(self::$_cti === NULL)
 			{
-				$type_key = key(self::$_config[$object_name]);
+				// load extension config
+				self::$_cti = Kohana::config('mangoCTI');
+			}
 
-				if (isset($id[$type_key]) && isset(self::$_config[$object_name][$type_key][$id[$type_key]]))
+			while (isset(self::$_cti[$name]))
+			{
+				$key = key(self::$_cti[$name]);
+
+				if (isset($values[$key]) && isset(self::$_cti[$name][$key][$values[$key]]))
 				{
-					// extension found - update model_name
-					$object_name = self::$_config[$object_name][$type_key][$id[$type_key]];
+					// extend
+					$name = self::$_cti[$name][$key][$values[$key]];
 				}
 				else
 				{
@@ -145,68 +47,398 @@ class Mango implements Mango_Interface {
 			}
 		}
 
-		if($extend_only)
+		if ( ! isset($models[$name]))
 		{
-			$id = NULL;
+			$class = 'Model_'.$name;
+
+			$models[$name] = new $class;
 		}
 
-		$model = 'Model_' . ucfirst($object_name);
-		return new $model($id);
+		// Create a new instance of the model by clone
+		$model = clone $models[$name];
+
+		if($values)
+		{
+			switch($load_type)
+			{
+				case Mango::CHANGE:
+					$model->values($values);
+				break;
+				case Mango::CLEAN:
+					$model->values($values,TRUE);
+				break;
+			}
+		}
+
+		return $model;
 	}
 
-	// Constructor
-	public function __construct($id = NULL)
-	{
-		$this->initialize();
+	/**
+	 * @var  string  model name
+	 */
+	protected $_model;
 
-		if (is_array($id))
+	/**
+	 * @var  string  database instance name
+	 */
+	protected $_db = 'default';
+
+	/**
+	 * @var  string  database collection name
+	 */
+	protected $_collection;
+
+	/**
+	 * @var  boolean  indicates if model is embedded
+	 */
+	protected $_embedded = FALSE;
+
+	/**
+	 * @var  array  field list (name => field data)
+	 */
+	protected $_fields = array();
+
+	/**
+	 * @var  array  relation list (name => relation data)
+	 */
+	protected $_relations = array();
+
+	/**
+	 * @var  array  object data
+	 */
+	protected $_object = array();
+
+	/**
+	 * @var  array  related data
+	 */
+	protected $_related = array();
+
+	/**
+	 * @var  array  changed fields
+	 */
+	protected $_changed = array();
+
+	/**
+	 * @var  boolean  initialization status
+	 */
+	protected $_init = FALSE;
+
+	/**
+	 * Calls the init() method. Mango constructors are only called once!
+	 *
+	 * @param   string   model name
+	 * @return  void
+	 */
+	final protected function __construct()
+	{
+		$this->init();
+	}
+
+	/**
+	 * Returns the model name.
+	 *
+	 * @return  string
+	 */
+	final public function __toString()
+	{
+		return $this->_model;
+	}
+
+	/**
+	 * Clones each of the fields and empty the model.
+	 *
+	 * @return  void
+	 */
+	public function __clone()
+	{
+		$this->clear();
+	}
+
+	/**
+	 * Returns the attributes that should be serialized.
+	 *
+	 * @return  void
+	 */
+	public function __sleep()
+	{
+		return array('_object', '_changed');
+	}
+
+	/**
+	 * Checks if a field is set
+	 *
+	 * @return  boolean  field is set
+	 */
+	public function __isset($name)
+	{
+		return isset($this->_fields[$name]) 
+			? isset($this->_object[$name]) 
+			: isset($this->_related[$name]);
+	}
+
+	/**
+	 * Unset a field
+	 *
+	 * @return  void
+	 */
+	public function __unset($name)
+	{
+		// no support for $unset yet, now setting to NULL (if value was set)
+		if($this->__isset($name))
 		{
-			// Load an object from array
-			$this->values($id);
-		}
-		elseif (!empty($id))
-		{
-			// Find an object by ID
-			$this->find( $this->unique_criteria($id) , 1 );
+			$this->__set($name,NULL);
 		}
 	}
 
-	public function initialize()
+	/**
+	 * Empties the model
+	 */
+	public function clear()
 	{
-		// Derive object_name
-		$this->_object_name   = strtolower(substr(get_class($this), 6));
-		$this->_object_plural = inflector::plural($this->_object_name);
+		$this->_object = $this->_changed = array();
 
-		// set columns/relationships
+		return $this;
+	}
+
+	/**
+	 * Return field data for a certain field
+	 *
+	 * @param   string         field name
+	 * @return  boolean|array  field data if field exists, otherwise FALSE
+	 */
+	public function field($name)
+	{
+		return isset($this->_fields[$name])
+			? $this->_fields[$name]
+			: FALSE;
+	}
+
+	/**
+	 * Return db reference
+	 *
+	 * @return  MangoDB  database object
+	 */
+	public function db()
+	{
+		return $this->_db;
+	}
+
+	/**
+	 * Get the value of a field.
+	 *
+	 * @throws  Mango_Exception  field does not exist
+	 * @param   string  field name
+	 * @return  mixed
+	 */
+	public function __get($name)
+	{
+		if ( ! $this->_init)
+		{
+			$this->init();
+		}
+
+		if ( isset($this->_fields[$name]))
+		{
+			$field = $this->_fields[$name];
+
+			$value = isset($this->_object[$name])
+				? $this->_object[$name]
+				: NULL;
+
+			switch($field['type'])
+			{
+				case 'enum':
+					$value = isset($value) && isset($field['values'][$value]) 
+						? $field['values'][$value] 
+						: NULL;
+				break;
+				case 'set':
+				case 'array':
+				case 'has_one':
+				case 'has_many':
+					if($value === NULL)
+					{
+						// 'secretly' create value - access _object directly, not recorded as change
+						$value = $this->_object[$name] = $this->load_field($name,array());
+					}
+				break;
+				case 'counter':
+					if($value === NULL)
+					{
+						// 'secretly' create counter - access _object directly, not recorded as change
+						$value = $this->_object[$name] = $this->load_field($name,0);
+					}
+				break;
+			}
+
+			if ( $value === NULL && isset($field['default']))
+			{
+				$value = $field['default'];
+			}
+
+			return $value;
+		}
+		elseif ( isset($this->_relations[$name]))
+		{
+			if ( !isset($this->_related[$name]))
+			{
+				$relation = $this->_relations[$name];
+
+				switch($relation['type'])
+				{
+					case 'has_one':
+						$values = array($this->_model . '_id' => $this->_id);
+						$limit = 1;
+					break;
+					case 'belongs_to':
+						$values = array('_id' => $this->_object[$name . '_id']);
+						$limit = 1;
+					break;
+					case 'has_many':
+						$values = array($this->_model . '_id' => $this->_id);
+						$limit = FALSE;
+					break;
+					case 'has_and_belongs_to_many':
+						$values = array('_id' => array('$in' => $this->__get($name . '_ids')->as_array()));
+						$limit = FALSE;
+					break;
+				}
+
+				$this->_related[$name] = Mango::factory($relation['model'],$values)->load($limit);
+			}
+
+			return $this->_related[$name];
+		}
+		else
+		{
+			throw new Mango_Exception(':name model does not have a field :field',
+				array(':name' => $this->_model, ':field' => $name));
+		}
+	}
+
+	/**
+	 * Set the value of a field.
+	 *
+	 * @throws  Mango_Exception  field does not exist
+	 * @param   string  field name
+	 * @param   mixed   new field value
+	 * @return  mixed
+	 */
+	public function __set($name, $value)
+	{
+		if ( ! $this->_init)
+		{
+			$this->init();
+		}
+
+		if ( isset($this->_fields[$name]))
+		{
+			$value = $this->load_field($name,$value);
+
+			if ( isset($this->_object[$name]))
+			{
+				// don't update value if the value did not change
+
+				$current = $this->_object[$name];
+
+				if($current === $value)
+				{
+					return;
+				}
+				elseif ($value instanceof Mango_Interface && $current instanceof Mango_Interface && $value->as_array() === $current->as_array())
+				{
+					return;
+				}
+				elseif ($value instanceof MongoId && $current instanceof MongoId && (string) $value === (string) $current)
+				{
+					return;
+				}
+			}
+			elseif ( $value === NULL || $value === '')
+			{
+				return;
+			}
+
+			//echo 'Setting:  ' . $name . ' to ' . (is_object($value) ? get_class($value) : $value) . ' in ' . $this->_model . '<bR>';
+
+			// update object
+			$this->_object[$name] = $value;
+
+			// mark change
+			$this->_changed[$name] = TRUE;
+		}
+		elseif ( isset($this->_relations[$name]) && $this->_relations[$name]['type'] === 'belongs_to')
+		{
+			$this->__set($name . '_id',$value->_id);
+			$this->_related[$name] = $value;
+		}
+		else
+		{
+			throw new Mango_Exception(':name model does not have a field :field',
+				array(':name' => $this->_model, ':field' => $name));
+		}
+	}
+
+	/**
+	 * Initialize the fields and add validation rules based on field properties.
+	 *
+	 * @return  void
+	 */
+	protected function init()
+	{
+		if ($this->_init)
+		{
+			// Can only be called once
+			return;
+		}
+
+		// Set up fields
 		$this->set_model_definition();
+
+		if ( ! $this->_model)
+		{
+			// Set the model name based on the class name
+			$this->_model = strtolower(substr(get_class($this), 6));
+		}
 
 		if (!$this->_embedded )
 		{
-			// Setup DB if not embedded
-			if (empty($this->_collection_name))
+			if ( ! $this->_collection)
 			{
-				// Collection name is the same as plural of object_name
-				$this->_collection_name = $this->_object_plural;
+				// Set the collection name to the plural model name
+				$this->_collection = Inflector::plural($this->_model);
 			}
 
-			// Add ID field to columns
-			if( ! isset($this->_columns['_id']) )
-			{
-				$this->_columns['_id'] = array('type'=>'MongoId');
-			}
+			$this->_fields['_id'] = array('type'=>'MongoId');
 
-			// Add foreign key IDs
-			foreach($this->_belongs_to as $object_name)
+			// Normalize relations
+			foreach($this->_relations as $name => &$relation)
 			{
-				if( ! isset($this->_columns[$object_name . '_id']) )
+				if ( $relation['type'] === 'has_and_belongs_to_many')
 				{
-					$this->_columns[$object_name . '_id'] = array('type'=>'MongoId');
+					$relation['model'] = Inflector::singular($name);
 				}
-			}
+				elseif ( ! isset($relation['model']))
+				{
+					if ( $relation['type'] === 'belongs_to' || $relation['type'] === 'has_one')
+					{
+						$relation['model'] = $name;
+					}
+					else
+					{
+						$relation['model'] = Inflector::singular($name);
+					}
+				}
 
-			foreach($this->_has_and_belongs_to_many as $object_plural)
-			{
-				$this->_columns[$object_plural . '_ids'] = array('type'=>'set');
+				switch($relation['type'])
+				{
+					case 'belongs_to':
+						$this->_fields[$name . '_id'] = array('type'=>'MongoId');
+					break;
+					case 'has_and_belongs_to_many':
+						$this->_fields[$name . '_ids'] = array('type'=>'set');
+					break;
+				}
 			}
 
 			// Initialize DB
@@ -215,104 +447,126 @@ class Mango implements Mango_Interface {
 				$this->_db = MangoDB::instance($this->_db);
 			}
 		}
+
+		$this->_init = TRUE;
 	}
 
+	/**
+	 * Overload in child classes to setup model definition
+	 * Call $this->_set_model_definition( array( ... ));
+	 *
+	 * @return  void
+	 */
 	protected function set_model_definition() {}
 
-	// Update columns/relationships during initialization
-	// Primary used in inheritance patterns
+	/**
+	 * Add definition to this model.
+	 * Called in child classes in the set_model_definition method
+	 *
+	 * @return  void
+	 */
 	protected function _set_model_definition(array $definition)
 	{
-		if(isset($definition['_columns']))
+		if(isset($definition['_fields']))
 		{
-			$this->_columns = array_merge($this->_columns,$definition['_columns']);
+			$this->_fields = array_merge($this->_fields,$definition['_fields']);
 		}
 
-		if(isset($definition['_has_one']))
+		if(isset($definition['_relations']))
 		{
-			$this->_has_one = array_merge($this->_has_one,$definition['_has_one']);
-		}
-
-		if(isset($definition['_has_many']))
-		{
-			$this->_has_many = array_merge($this->_has_many,$definition['_has_many']);
-		}
-
-		if(isset($definition['_has_and_belongs_to_many']))
-		{
-			$this->_has_and_belongs_to_many = array_merge($this->_has_and_belongs_to_many,$definition['_has_and_belongs_to_many']);
+			$this->_relations = array_merge($this->_has_one,$definition['_relations']);
 		}
 	}
 
-	// Find one or more objects (documents) in collection
-	public function find(array $criteria = array(),$limit = NULL,array $sort = NULL,$fields = array())
+	/**
+	 * Load all of the values in an associative array. Ignores all fields
+	 * not in the model.
+	 *
+	 * @param   array    field => value pairs
+	 * @param   boolean  values are clean (from database)?
+	 * @return  $this
+	 */
+	public function values(array $values, $clean = FALSE)
 	{
-		if($this->_embedded)
+		// Remove all values which do not have a corresponding field
+		$values = array_intersect_key($values, $this->_fields);
+
+		foreach ($values as $field => $value)
 		{
-			// no database interaction on embedded objects
-			throw new Kohana_Exception('no queries possible on embedded objects');
-		}
+			//echo 'values as: ' .  ($clean ? 'TRUE' : 'FALSE') . ' in: ' . $field . ' to ' . (is_object($value) ? get_class($value) : $value) . ' in ' . $this->_model .'<br>';
 
-		if($limit === 1 && $sort === NULL)
-		{
-			// looking for ID or limiting 1 without sort -> use findOne
-			$values = $this->_db->find_one($this->_collection_name,$criteria,$fields);
-			return $values !== NULL ? $this->values($values) : $this->clear();
-		}
-		else
-		{
-			// looking for 2+ objects or sorting - use find
-			$values = $this->_db->find($this->_collection_name,$criteria,$fields);
-
-			if($limit !== NULL)
+			if ($clean === TRUE)
 			{
-				$values->limit($limit);
-			}
-
-			if($sort !== NULL)
-			{
-				$values->sort($sort);
-			}
-
-			$result = new Mango_Iterator($this->_object_name,$values);
-
-			if($limit === 1)
-			{
-				return $result->count() ? $result->current() : NULL;
+				// Set the field directly
+				$this->_object[$field] = $this->load_field($field,$value);
 			}
 			else
 			{
-				return $result;
+				// Set the field using __set()
+				$this->$field = $value;
 			}
 		}
+
+		return $this;
 	}
 
-	// Reload object from database
-	public function reload()
+	/**
+	 * Get the model data as an associative array.
+	 * @param  boolean  retrieve values directly from _object
+	 *
+	 * @return  array  field => value
+	 */
+	public function as_array( $clean = TRUE )
 	{
-		return $this->_loaded ? $this->find( array('_id' => $this->_id), 1 ) : $this->clear();
+		$array = array();
+
+		foreach($this->_object as $name => $value)
+		{
+			$array[$name] = $value instanceof Mango_Interface 
+				? $value->as_array( $clean ) 
+				: ($clean ? $value : $this->__get($name));
+		}
+
+		return count($array) || $debug ? $array : new MongoEmptyObj;
 	}
 
-	// Returns all changes made to this object after last save
-	// if $update === TRUE, will format updates using modifiers and dot notated keystrings
-	public function get_changed($update, array $prefix= array())
+	/**
+	 * Test if the model is loaded.
+	 *
+	 * @return  boolean
+	 */
+	public function loaded()
+	{
+		return $this->_embedded || (isset($this->_id) && !isset($this->_changed['_id']));
+	}
+
+	/**
+	 * Get all of the changed fields as an associative array.
+	 * @param  boolean  structure array for update (using modifiers/dot notation)
+	 * @param  array    prefix data, used internally
+	 
+	 * @return  array  field => value
+	 */
+	public function changed($update, array $prefix= array())
 	{
 		$changed = array();
 
-		foreach($this->_columns as $column_name => $column_data)
+		foreach($this->_fields as $name => $field)
 		{
-			$value = $this->__isset($column_name) ? $this->_object[$column_name] : NULL;
-
-			if (isset($column_data['local']) && $column_data['local'] === TRUE)
+			if (isset($field['local']) && $field['local'] === TRUE)
 			{
 				// local variables are not stored in DB
 				continue;
 			}
 
-			// prepare prefix
-			$path = array_merge($prefix,array($column_name));
+			$value = $this->__isset($name) 
+				? $this->_object[$name] 
+				: NULL;
 
-			if (isset($this->_changed[$column_name]))
+			// prepare prefix
+			$path = array_merge($prefix,array($name));
+
+			if (isset($this->_changed[$name]))
 			{
 				// value has been changed
 				if($value instanceof Mango_Interface)
@@ -329,12 +583,12 @@ class Mango implements Mango_Interface {
 					$changed = arr::merge($changed, arr::path_set($path,$value) );
 				}
 			}
-			elseif ($this->__isset($column_name))
+			elseif ($this->__isset($name))
 			{
 				// check any (embedded) objects/arrays/sets
 				if($value instanceof Mango_Interface)
 				{
-					$changed = arr::merge($changed, $value->get_changed($update,$path));
+					$changed = arr::merge($changed, $value->changed($update,$path));
 				}
 			}
 		}
@@ -342,467 +596,422 @@ class Mango implements Mango_Interface {
 		return $changed;
 	}
 
-	/* Returns object (and its embedded objects) as associative array
+	/**
+	 * Indicate model has been saved, resets $this->_changed array
 	 *
-	 * @param boolean    actively call __get to fetch data instead of reading from _object array
+	 * @return  void
 	 */
-	public function as_array( $debug = FALSE )
+	public function saved()
 	{
-		$array = array();
-
-		foreach($this->_object as $column_name => $value)
-		{
-			$array[$column_name] = $value instanceof Mango_Interface ? $value->as_array( $debug ) : ($debug ? $this->__get($column_name) : $value);
-		}
-
-		return count($array) || $debug ? $array : new MongoEmptyObj;
-	}
-
-	// Set status to saved and empties changed array
-	// in all of this document and its embedded data
-	public function set_saved()
-	{
-		foreach($this->_object as $column_name => $value)
+		foreach($this->_object as $value)
 		{
 			if($value instanceof Mango_Interface)
 			{
-				$value->set_saved();
+				$value->saved();
 			}
 		}
 
-		$this->_loaded = $this->_saved = TRUE;
 		$this->_changed = array();
 	}
 
-	// Validate data before saving
-	protected function validate(Validate $validate, $save = FALSE)
+	/**
+	 * Load a (set of) record(s) from the database
+	 *
+	 * @return  $this
+	 */
+	public function load($limit = 1, array $sort = NULL, array $fields = array())
 	{
-		foreach($this->_columns as $column_name => $column_data)
+		if($this->_embedded)
 		{
-			// Add rules based on $_columns data
-			
-			switch($column_data['type'])
+			throw new Mango_Exception(':name model is embedded and cannot be loaded from database',
+				array(':name' => $this->_model));
+		}
+
+		$criteria = $this->changed(FALSE);
+
+		// resets $this->_changed array
+		$this->clear();
+
+		if ( $limit === 1)
+		{
+			$values = $this->_db->find_one($this->_collection,$criteria,$fields);
+
+			return $values === NULL
+				? $this
+				: $this->values($values, TRUE);
+		}
+		else
+		{
+			$values = $this->_db->find($this->_collection,$criteria,$fields);
+
+			if(is_int($limit))
+			{
+				$values->limit($limit);
+			}
+
+			if($sort !== NULL)
+			{
+				$values->sort($sort);
+			}
+
+			return new Mango_Iterator($this->_model,$values);
+		}
+	}
+
+	/**
+	 * Create a new record using the current data.
+	 *
+	 * @return  $this
+	 */
+	public function create()
+	{
+		if($this->_embedded)
+		{
+			throw new Mango_Exception(':name model is embedded and cannot be created in the database',
+				array(':name' => $this->_model));
+		}
+
+		if ( $values = $this->changed(FALSE))
+		{
+			$user_defined_id = isset($values['_id']);
+
+			do
+			{
+				// insert
+				$this->_db->insert($this->_collection, $values);
+
+				// check for success
+				$err = $this->_db->last_error();
+
+				// prevent endless loop
+				$try = isset($try) ? $try + 1 : 1; 
+			}
+			while( $err['err'] && ! $user_defined_id && $try < 5 );
+
+			if($err['err'])
+			{
+				// Something went wrong - throw error
+				throw new Mango_Exception('Unable to create :model, database returned error :error',
+					array(':model' => $this->_model, ':error' => $err['err']));
+			}
+
+			if ( ! isset($this->_object['id']))
+			{
+				// Store (assigned) MongoID in object
+				$this->_object['_id'] = $this->load_field('_id',$values['_id']);
+			}
+
+			$this->saved();
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Update the current record using the current data.
+	 *
+	 * @return  $this
+	 */
+	public function update()
+	{
+		if($this->_embedded)
+		{
+			throw new Mango_Exception(':name model is embedded and cannot be updated itself (update parent instead)',
+				array(':name' => $this->_model));
+		}
+
+		if ( $values = $this->changed(TRUE))
+		{
+			$this->_db->update($this->_collection,array('_id'=>$this->_id), $values, TRUE);
+
+			$this->saved();
+		}
+		
+		return $this;
+	}
+
+	/**
+	 * Delete the current record using the current data.
+	 *
+	 * @return  $this
+	 */
+	public function delete()
+	{
+		if ( $this->_embedded)
+		{
+			throw new Mango_Exception(':name model is embedded and cannot be deleted (delete parent instead)',
+				array(':name' => $this->_model));
+		}
+		elseif ( ! $this->loaded())
+		{
+			$this->load(1);
+
+			if( ! $this->loaded())
+			{
+				// model does not exist
+				return $this;
+			}
+		}
+
+		// Update/remove relations
+		foreach($this->_relations as $name => $relation)
+		{
+			switch($relation['type'])
+			{
+				case 'has_one':
+					$this->__get($name)->delete();
+				break;
+				case 'has_many':
+					foreach($this->__get($name) as $hm)
+					{
+						$hm->delete();
+					}
+				break;
+				case 'has_and_belongs_to_many':
+					$set = $this->__get($name . '_ids')->as_array();
+
+					if( $set)
+					{
+						$this->_db->execute('function () {'.
+						'  db.' . $name . '.find({_id: { $in:[ObjectId(\''. implode('\',\'',$set ) . '\')]}}).forEach( function(obj) {'.
+						'    db.' . $name . '.update({_id:obj._id},{ $pull : { ' . Inflector::plural($this->_model) . '_ids' . ': ObjectId(\'' .  $this->_id . '\')}});'.
+						'  });'.
+						'}');
+					}
+				break;
+			}
+		}
+
+		$this->_db->remove($this->_collection, array('_id'=>$this->_id), FALSE);
+
+		return $this;
+	}
+
+	/**
+	 * Check the given data is valid.
+	 *
+	 * @throws  Validate_Exception  when an error is found
+	 * @param   array    data to check, field => value
+	 * @param   boolean  only validate the fields supplied in $data
+	 * @return  array    filtered data
+	 */
+	/*public function check(array $data = NULL)
+	{
+		if($data === NULL)
+		{
+			$data = $this->_object;
+		}
+
+		$data = Validate::factory($data);
+
+		$data = $this->_check($data);
+
+		if ( ! $data->check())
+		{
+			throw new Validate_Exception($data);
+		}
+
+		return $data->as_array();
+	}*/
+
+	public function check(array $data = NULL, $update = FALSE)
+	{
+		if($data === NULL)
+		{
+			$values = $this->as_array( FALSE );
+		}
+		elseif ($update === TRUE)
+		{
+			/**
+			 * We always have to validate a complete object
+			 * because validation rules of field A could be dependent
+			 * on the value of field B.
+			 *
+			 * So we add the missing values of the update array
+			 */
+			$values = array_merge( $this->as_array( FALSE ), $data);
+		}
+		else
+		{
+			$values = $data;
+		}
+
+		$array = Validate::factory($values);
+
+		// Add validation rules
+		$array = $this->_check($array);
+
+		if ( ! $array->check())
+		{
+			throw new Validate_Exception($array);
+		}
+
+		return $update === TRUE
+			? array_intersect_key($array->as_array(),$data)
+			: $array->as_array();
+	}
+
+	/**
+	 * Add validation rules to validiate object based on
+	 * field specification.
+	 *
+	 * You can overload this method and add your own
+	 * (more complicated) rules
+	 *
+	 * @param   Validate  Validate object
+	 * @return  Validate  Validate object
+	 */
+	protected function _check(Validate $data)
+	{
+		foreach ($this->_fields as $name => $field)
+		{
+			// field type rules
+			switch($field['type'])
 			{
 				case 'enum':
-					$validate->rule($column_name,'in_array',array($column_data['values']));
+					$data->rule($name,'in_array',array($field['values']));
 				break;
 				case 'int':
 				case 'float':
 				case 'string':
 				case 'array':
-					$validate->rule($column_name,'is_' . $column_data['type']);
+					$data->rule($name,'is_' . $field['type']);
+				break;
+				case 'email':
+					$data->rule($name,'email');
 				break;
 				case 'boolean':
-					$validate->rule($column_name,'is_bool');
+					$data->rule($name,'is_bool');
 				break;
 				case 'counter':
-					$validate->rule($column_name,'is_int');
+					$data->rule($name,'is_int');
 				break;
 				case 'set':
-					$validate->rule($column_name,'is_array');
+					$data->rule($name,'is_array');
 				break;
 			}
 
-			if(isset($column_data['required']) AND $column_data['required'] === TRUE)
+			// field is required
+			if(isset($field['required']) AND $field['required'] === TRUE)
 			{
-				$validate->rule($column_name,'required');
+				$data->rule($name,'required');
+			}
+
+			// min/max length/value
+			foreach( array('min_value','max_value','min_length','max_length') as $rule)
+			{
+				if(isset($field[$rule]))
+				{
+					$data->rule($name,$rule,array($field[$rule]));
+				}
+			}
+
+			// value has to be unique
+			if ( isset($field['unique']) && $field['unique'] === TRUE)
+			{
+				$data->callback($name,array($this,'_is_unique'));
+			}
+
+			// filters contained in field spec
+			if ( isset($field['filters']))
+			{
+				$data->filters($name,$field['filters']);
+			}
+
+			// rules contained in field spec
+			if ( isset($field['rules']))
+			{
+				$data->rules($name,$field['rules']);
+			}
+
+			if ( isset($field['callbacks']))
+			{
+				$data->callbacks($name,$field['callbacks']);
+			}
+		}
+
+		foreach ($this->_relations as $name => &$relation)
+		{
+			// belongs to ID field
+			if($relation['type'] === 'belongs_to')
+			{
+				$data->rule($name . '_id','required');
+			}
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Add rules to Validate object
+	 *
+	 * @param   Validate  Validate object
+	 * @return  Validate  Validate object with added rules
+	 */
+	/*protected function _check(Validate $data)
+	{
+		foreach ($this->_fields as $name => $field)
+		{
+			switch($field['type'])
+			{
+				case 'enum':
+					$data->rule($name,'in_array',array($field['values']));
+				break;
+				case 'int':
+				case 'float':
+				case 'string':
+				case 'array':
+					$data->rule($name,'is_' . $field['type']);
+				break;
+				case 'boolean':
+					$data->rule($name,'is_bool');
+				break;
+				case 'counter':
+					$data->rule($name,'is_int');
+				break;
+				case 'set':
+					$data->rule($name,'is_array');
+				break;
+			}
+
+			if(isset($field['required']) AND $field['required'] === TRUE)
+			{
+				$data->rule($name,'required');
 			}
 
 			foreach( array('min_value','max_value','min_length','max_length') as $rule)
 			{
-				if(isset($column_data[$rule]))
+				if(isset($field[$rule]))
 				{
-					$validate->rule($column_name,$rule,array($column_data[$rule]));
+					$data->rule($name,$rule,array($field[$rule]));
 				}
 			}
 		}
 
-		foreach($this->_belongs_to as $parent)
+		foreach ($this->_relations as $name => $relation)
 		{
-			$validate->rule($parent . '_id','required');
-		}
-
-		if($status = $validate->check())
-		{
-			$fields = $validate->as_array();
-
-			foreach($fields as $column => $value)
+			if($relation['type'] === 'belongs_to')
 			{
-				if( ($value === NULL || $value === '') AND ! $this->__isset($column))
-				{
-					// don't set empty values that were empty to begin with
-					continue;
-				}
-
-				$this->$column = $value;
-			}
-
-			if ($save === TRUE OR is_string($save))
-			{
-				// Save this object
-				$this->save();
-
-				if (is_string($save))
-				{
-					// Redirect to the saved page
-					url::redirect($save);
-				}
+				$data->rule($name . '_id','required');
 			}
 		}
 
-		return $status;
-	}
+		return $data;
+	}*/
 
-	// Save object
-	public function save()
+	/**
+	 * Formats a value into correct a valid value for the specific field
+	 *
+	 * @param   string  field name
+	 * @param   mixed   field value
+	 * @return  mixed   formatted value
+	 */
+	protected function load_field($name, $value)
 	{
-		if($this->_embedded)
-		{
-			return FALSE;
-		}
+		// Load field data
+		$field = $this->_fields[$name];
 
-		$update = $this->get_changed( $this->_loaded );
-
-		if(! empty($update))
-		{
-			if($this->_loaded === TRUE)
-			{
-				// Exists in DB - update
-				$this->_db->update($this->_collection_name,array('_id'=>$this->_id), $update, TRUE);
-			}
-			else
-			{
-				// checking of duplicate ID (the insert query does not tell you if the insert was sucessful)
-
-				$user_defined_id = isset($update['_id']);
-
-				do
-				{
-					// try to insert data into collection
-					$this->_db->insert($this->_collection_name, $update );
-
-					// read error
-					$err = $this->_db->last_error();
-
-					// just a safety measure - not sure if the database throws other errors here
-					// that would throw this into a endless loop
-					$try = isset($try) ? $try + 1 : 1; 
-				}
-				while( $err['err'] && ! $user_defined_id && $try < 5 );
-
-				if($err['err'])
-				{
-					// Something went wrong - throw error
-					throw new Kohana_Exception('Database returned error :error',
-						array(':error' => $err['err']));
-				}
-
-				if( ! isset($this->_object['id'] ) )
-				{
-					// Store (assigned) MongoID in object
-					$this->_object['_id'] = $this->load_type('_id',$update['_id'],FALSE);
-				}
-			}
-		}
-
-		// Everything is up to date now
-		$this->set_saved();
-
-		return $this->_saved;
-	}
-
-	// Deletes object
-	public function delete($id = NULL)
-	{
-		if ($id === NULL)
-		{
-			if( ! $this->_loaded || $this->_embedded )
-			{
-				return FALSE;
-			}
-
-			// Use the the primary key value
-			$id = $this->_object['_id'];
-		}
-		else if($id !== $this->_id)
-		{
-			// call delete method in actual object - to make sure it's children are deleted properly
-			return Mango::factory($this->_object_name,$id)->delete();
-		}
-
-		// Delete children
-		foreach($this->_has_one as $ha)
-		{
-			$this->$ha->delete();
-		}
-
-		foreach($this->_has_many as $hm)
-		{
-			// Remove each object separately because delete method could be overloaded
-			foreach($this->__get($hm) as $h)
-			{
-				$h->delete();
-			}
-		}
-
-		// Delete HABTM relation info
-		$foreign_column_name = $this->_object_plural . '_ids';
-		foreach($this->_has_and_belongs_to_many as $hb)
-		{
-			$column_name = $hb . '_ids';
-			
-			if(! empty($this->$column_name))
-			{
-				// we can do DB.eval here
-				$this->_db->execute('function () {'.
-				'  db.' . $hb . '.find({_id: { $in:[ObjectId(\''. implode('\',\'',$this->$column_name->as_array() ) . '\')]}}).forEach( function(obj) {'.
-				'    db.' . $hb . '.update({_id:obj._id},{ $pull : { ' . $foreign_column_name . ': ObjectId(\'' .  $this->_id . '\')}});'.
-				'  });'.
-				'}');
-			}
-		}
-
-		// Delete this object
-		$this->_db->remove( $this->_collection_name, $this->unique_criteria($id), TRUE);
-
-		return $this->clear();
-	}
-
-	// Load an array of values into object
-	public function values(array $values)
-	{
-		if (array_key_exists('_id', $values) || $this->_embedded)
-		{
-			// Replace the object and reset the object status
-			$this->_object = $this->_changed = $this->_related = array();
-
-			// Set the loaded and saved object status based on the primary key
-			$this->_loaded = $this->_saved = $this->_embedded || ($values['_id'] !== NULL);
-		}
-
-		foreach ($values as $column => $value)
-		{
-			if (isset($this->_columns[$column]))
-			{
-				$this->_object[$column] = $this->load_type($column, $value, FALSE);
-			}
-		}
-
-		return $this;
-	}
-
-	// Serialize info
-	public function __sleep()
-	{
-		return array('_object', '_changed', '_loaded', '_saved');
-	}
-
-	// Serialize info
-	public function __wakeup()
-	{
-		$this->initialize();
-	}
-
-	// Empty object
-	public function clear()
-	{
-		// Create an array with all the columns set to NULL
-		$columns = array_keys($this->_columns);
-		$values  = array_combine($columns, array_fill(0, count($columns), NULL));
-
-		// Replace the current object with an empty one
-		$this->values($values);
-
-		return $this;
-	}
-
-	public function has($column_singular,Mango $model = NULL)
-	{
-		if($model === NULL)
-		{
-			$model = $column_singular;
-			$column_singular = $model->_object_name;
-		}
-
-		$column_plural = Inflector::plural($column_singular);
-
-		if(in_array($column_plural,$this->_has_and_belongs_to_many))
-		{
-			$column = $column_plural . '_ids';
-			$value = $model->_id;
-		}
-		elseif(isset($this->_columns[$column_plural]) && $this->_columns[$column_plural]['type'] === 'has_many' )
-		{
-			$column = $column_plural;
-			$value = $model;
-		}
-
-		return isset($column) ? ($this->__isset($column) ? $this->__get($column)->find($value) !== FALSE : FALSE) : FALSE;
-	}
-
-	public function add($column_singular,Mango $model, $returned = FALSE)
-	{
-		if($this->has($column_singular,$model))
-		{
-			// already added
-			return TRUE;
-		}
-
-		$column_plural = Inflector::plural($column_singular);
-
-		if(in_array($column_plural,$this->_has_and_belongs_to_many))
-		{
-			if( ! $model->_loaded || ! $this->_loaded )
-				return FALSE;
-
-			$column = $model->_object_plural . '_ids';
-
-			// try to push
-			if($this->__get($column)->push($model->_id))
-			{
-				// push succeed
-				if( isset($this->_related[$column_plural]) )
-				{
-					// Related models have been loaded already, add this one
-					$this->_related[$column_plural][] = $model;
-				}
-
-				if( ! $returned )
-				{
-					// add relation to model as well
-					$model->add($column_singular,$this,TRUE);
-				}
-			}
-
-			// model has been added or was already added
-			return TRUE;
-		}
-		elseif ( isset($this->_columns[$column_plural]) && $this->_columns[$column_plural]['type'] === 'has_many' )
-		{
-			return $this->__get($column_plural)->push($model);
-		}
-		
-		return FALSE;
-	}
-
-	public function remove($column_singular,Mango $model, $returned = FALSE)
-	{
-		if(! $this->has($column_singular,$model))
-		{
-			// already removed
-			return TRUE;
-		}
-
-		$column_plural = Inflector::plural($column_singular);
-
-		if(in_array($column_plural,$this->_has_and_belongs_to_many))
-		{
-			if( ! $model->_loaded || ! $this->_loaded )
-				return FALSE;
-
-			$column = $model->_object_plural . '_ids';
-
-			// try to pull
-			if($this->__get($column)->pull($model->_id))
-			{
-				// pull succeed
-				if( isset($this->_related[$column_plural]) )
-				{
-					// Related models have been loaded already, remove this one
-					$related = array();
-					foreach($this->_related[$column_plural] as $objecT)
-					{
-						if($object->as_array() !== $model->as_array())
-						{
-							$related[] = $object;
-						}
-					}
-					$this->_related[$column_plural] = $related;
-				}
-
-				if( ! $returned )
-				{
-					// add relation to model as well
-					$model->remove($column_singular,$this,TRUE);
-				}
-			}
-
-			// model has been removed or was already removed
-			return TRUE;
-		}
-		elseif ( isset($this->_columns[$column_plural]) && $this->_columns[$column_plural]['type'] === 'has_many' )
-		{
-			return $this->__get($column_plural)->pull($model);
-		}
-
-		return FALSE;
-	}
-
-	// Magic set
-	public function __set($column,$value = NULL)
-	{
-		if (isset($this->_columns[$column]))
-		{
-			$value = $this->load_type($column,$value);
-
-			// do not update value if value is the same
-			if(isset($this->_object[$column]))
-			{
-				$current = $this->_object[$column];
-
-				if($current === $value)
-				{
-					return;
-				}
-				elseif ($value instanceof Mango_Interface && $current instanceof Mango_Interface && $value->as_array() === $current->as_array())
-				{
-					return;
-				}
-				elseif ($value instanceof MongoId && $current instanceof MongoId && (string) $value === (string) $current)
-				{
-					return;
-				}
-			}
-			else if($value === NULL)
-			{
-				return;
-			}
-
-			// update object
-			$this->_object[$column] = $value;
-
-			// object is no longer saved
-			$this->_saved = FALSE;
-
-			$this->_changed[$column] = TRUE;
-		}
-		elseif (in_array($column,$this->_belongs_to) )
-		{
-			if($value instanceof Mango && $value->_loaded)
-			{
-				$foreign_key = $column . '_id';
-
-				if($this->__get($foreign_key) !== $value->_id)
-				{
-					$this->__set($foreign_key,$value->_id);
-				}
-
-				$this->_related[$column] = $value;
-			}
-			else
-			{
-				throw new Kohana_Exception('Please provide parent object');
-			}
-		}
-	}
-
-	// Load a value into a column
-	protected function load_type($column, $value)
-	{
-		// Load column data
-		$column_data = $this->_columns[$column];
-
-		switch($column_data['type'])
+		switch($field['type'])
 		{
 			case 'MongoId':
 				if( $value !== NULL AND ! $value instanceof MongoId)
@@ -813,11 +1022,11 @@ class Mango implements Mango_Interface {
 			case 'enum':
 				if(is_numeric($value) && (int) $value == $value)
 				{
-					$value = isset($column_data['values'][$value]) ? $value : NULL;
+					$value = isset($field['values'][$value]) ? $value : NULL;
 				}
 				else
 				{
-					$value = ($key = array_search($value,$column_data['values'])) !== FALSE ? $key : NULL;
+					$value = ($key = array_search($value,$field['values'])) !== FALSE ? $key : NULL;
 				}
 			break;
 			case 'int':
@@ -837,63 +1046,65 @@ class Mango implements Mango_Interface {
 			case 'boolean':
 				$value = (bool) $value;
 			break;
+			case 'email':
 			case 'string':
-				$value = (string) $value;
+				$value = trim((string) $value);
 			break;
 			case 'has_one':
-				$model_name = isset($column_data['type_hint'])
-					? $column_data['type_hint']
-					: $column;
+				$model = isset($field['model'])
+					? $field['model']
+					: $name;
 
 				if(is_array($value))
 				{
-					$value = Mango::factory($model_name, $value);
+					$value = Mango::factory($model, $value, Mango::CLEAN);
 				}
 
-				if( ! ($value instanceof Mango) || ! is_a($value,'Model_' . $model_name ) )
+				if( ! $value instanceof Mango || (string) $value !== $model )
 				{
 					$value = NULL;
 				}
 			break;
 			case 'has_many':
-				$model_name = isset($column_data['type_hint']) 
-					? $column_data['type_hint'] 
-					: Inflector::singular($column);
+				$model = isset($field['model']) 
+					? $field['model'] 
+					: Inflector::singular($name);
 
-				$value = new Mango_Set($value, $model_name);
+				$value = new Mango_Set($value, $model);
 			break;
 			case 'counter':
 				$value = new Mango_Counter($value);
 			break;
 			case 'array':
-				$value = new Mango_Array($value, isset($column_data['type_hint']) ? $column_data['type_hint'] : NULL);
+				$value = new Mango_Array($value, isset($field['type_hint']) ? $field['type_hint'] : NULL);
 			break;
 			case 'set':
-				$value = new Mango_Set($value, isset($column_data['type_hint']) ? $column_data['type_hint'] : NULL);
+				$value = new Mango_Set($value, isset($field['type_hint']) ? $field['type_hint'] : NULL);
 			break;
 		}
 
 		if($value !== NULL)
 		{
-			switch($column_data['type'])
+			switch($field['type'])
 			{
 				case 'int':
 				case 'float':
-					if(isset($column_data['min_value']) AND $value < $column_data['min_value'])
+					if(isset($field['min_value']) AND $value < $field['min_value'])
 					{
 						$value = NULL;
 					}
-					if(isset($column_data['max_value']) AND $value > $column_data['max_value'])
+					if(isset($field['max_value']) AND $value > $field['max_value'])
 					{
 						$value = NULL;
 					}
 				break;
+				case 'email':
 				case 'string':
-					if(isset($column_data['min_length']) AND UTF8::strlen($value) < $column_data['min_length'])
+					if(isset($field['min_length']) AND UTF8::strlen($value) < $field['min_length'])
 					{
 						$value = NULL;
 					}
-					if(isset($column_data['max_length']) AND UTF8::strlen($value) > $column_data['max_length'])
+					if(isset($field['max_length']) AND UTF8::strlen($value) > $field['max_length'])
 					{
 						$value = NULL;
 					}
@@ -904,120 +1115,205 @@ class Mango implements Mango_Interface {
 		return $value;
 	}
 
-	// Magic get
-	public function __get($column)
+	/**
+	 * Checks if model is related to supplied model
+	 *
+	 * @throws  Mango_Exception  when relation does not exist
+	 * @param   Mango    model
+	 * @param   string   alternative name (if hm column has a name other than model name)
+	 * @return  boolean  model is related
+	 */
+	public function has(Mango $model, $name = NULL)
 	{
-		if( isset($this->_columns[$column] ) )
+		if($name === NULL)
 		{
-			// fetch value
-			$value = $this->__isset($column) ? $this->_object[$column] : NULL;
-
-			// fetch column data
-			$column_data = $this->_columns[$column];
-
-			switch($column_data['type'])
-			{
-				case 'enum':
-					$value = isset($value) && isset($column_data['values'][$value]) ? $column_data['values'][$value] : NULL;
-				break;
-				case 'has_one':
-					if($value === NULL)
-					{
-						$model_name = isset($column_data['type_hint'])
-							? $column_data['type_hint']
-							: $column;
-
-						$value = $this->_object[$column] = Mango::factory($model_name);
-					}
-				break;
-				case 'set':
-				case 'has_many':
-				case 'array':
-					if($value === NULL)
-					{
-						// 'secretly' load type into _object (not via __get, does not modify $this->_changed)
-						// any changes made to this object, are stored in the object's _changed and loaded
-						// when get_changed is run
-						$value = $this->_object[$column] = $this->load_type($column,array(),FALSE);
-					}
-				break;
-				case 'counter':
-					if($value === NULL)
-					{
-						$value = $this->_object[$column] = $this->load_type($column,0,FALSE);
-					}
-				break;
-			}
-
-			// check for default value
-			if($value === NULL && isset($column_data['default']) && !array_key_exists($column,$this->_object))
-			{
-				// default value only applies if value is NULL and has not been purposely set to NULL
-				$value = $column_data['default'];
-			}
-
-			return $value;
+			$name = (string) $model;
 		}
-		elseif (isset($this->_related[$column] ) )
-		{
-			return $this->_related[$column];
-		}
-		elseif (in_array($column,$this->_has_one) )
-		{
-			// has one - child contains foreign key
-			return $this->_related[$column] = Mango::factory($column)->find( array($this->_object_name . '_id' => $this->_id) , 1);
-		}
-		elseif (in_array($column,$this->_belongs_to) )
-		{
-			// belongs to - this object contains foreign key
-			return $this->_related[$column] = ($this->__isset($column . '_id') ? Mango::factory($column,$this->_object[$column.'_id']) : NULL);
-		}
-		elseif (in_array($column,$this->_has_many) )
-		{
-			// has many - children contain foreign key
-			$object_name = inflector::singular($column);
-			return $this->_related[$column] = Mango::factory($object_name)->find(array($this->_object_name . '_id' => $this->_id));
-		}
-		elseif (in_array($column,$this->_has_and_belongs_to_many) )
-		{
-			// has and belongs to many - IDs are stored in object
-			$model = Mango::factory( inflector::singular($column) );
-			$column_name = $model->_object_plural . '_ids';
 
-			return $this->_related[$column] = ! empty($this->$column_name) ? $model->find(array('_id'=> array('$in' => $this->$column_name))) : array();
-		}
-		elseif (isset($this->$column) )
+		$name_plural = Inflector::plural($name);
+
+		if ( isset($this->_relations[$name_plural]) && $this->_relations[$name_plural]['type'] === 'has_and_belongs_to_many')
 		{
-			// local variable
-			return $this->$column;
+			// related HABTM 
+			$field = $name_plural . '_ids';
+			$value = $model->_id;
+		}
+		elseif (isset($this->_fields[$name_plural]) && $this->_fields[$name_plural]['type'] === 'has_many' )
+		{
+			// embedded Has Many
+			$field = $name_plural;
+			$value = $model;
 		}
 		else
 		{
-			throw new Kohana_Exception('Property :column does not exist in :object', array(
-				':column'=>$column,
-				':object'=>$this->_object_name
-			));
+			throw new Mango_Exception('model :model has no relation with model :related',
+				array(':model' => $this->_model, ':related' => $name));
 		}
+
+		return isset($field) 
+			? ($this->__isset($field) ? $this->__get($field)->find($value) !== FALSE : FALSE) 
+			: FALSE;
 	}
 
-	public function __isset($column)
+	/**
+	 * Adds model to relation (if not already)
+	 *
+	 * @throws  Mango_Exception  when relation does not exist
+	 * @param   Mango    model
+	 * @param   string   alternative name (if hm column has a name other than model name)
+	 * @return  boolean  relation exists
+	 */
+	public function add(Mango $model, $name = NULL, $returned = FALSE)
 	{
-		return isset($this->_columns[$column]) ? isset($this->_object[$column]) : isset($this->_related[$column]);
-	}
-
-	public function __unset($column)
-	{
-		// no support for $unset yet, now setting to NULL (if value was set)
-		if($this->__isset($column))
+		if($name === NULL)
 		{
-			$this->__set($column,NULL);
+			$name = (string) $model;
+		}
+
+		if($this->has($model,$name))
+		{
+			// already added
+			return TRUE;
+		}
+
+		$name_plural = Inflector::plural($name);
+
+		if ( isset($this->_relations[$name_plural]) && $this->_relations[$name_plural]['type'] === 'has_and_belongs_to_many')
+		{
+			// related HABTM
+			if( ! $model->loaded() || ! $this->loaded() )
+			{
+				return FALSE;
+			}
+
+			$field = $name_plural . '_ids';
+
+			// try to push
+			if($this->__get($field)->push($model->_id))
+			{
+				// push succeed
+				if( isset($this->_related[$name_plural]) )
+				{
+					// Related models have been loaded already, add this one
+					$this->_related[$name_plural][] = $model;
+				}
+
+				if( ! $returned )
+				{
+					// add relation to model as well
+					$model->add($this,$this->_model,TRUE);
+				}
+			}
+
+			// model has been added or was already added
+			return TRUE;
+		}
+		elseif ( isset($this->_fields[$name_plural]) && $this->_fields[$name_plural]['type'] === 'has_many' )
+		{
+			return $this->__get($name_plural)->push($model);
+		}
+		else
+		{
+			throw new Mango_Exception('model :model has no relation with model :related',
+				array(':model' => $this->_model, ':related' => $name));
+		}
+
+		return FALSE;
+	}
+
+	/**
+	 * Removes related model
+	 *
+	 * @throws  Mango_Exception  when relation does not exist
+	 * @param   Mango    model
+	 * @param   string   alternative name (if hm column has a name other than model name)
+	 * @return  boolean  model is gone
+	 */
+	public function remove(Mango $model, $name = NULL,$returned = FALSE)
+	{
+		if($name === NULL)
+		{
+			$name = (string) $model;
+		}
+
+		if(! $this->has($model,$name))
+		{
+			// already removed
+			return TRUE;
+		}
+
+		$name_plural = Inflector::plural($name);
+
+		if ( isset($this->_relations[$name_plural]) && $this->_relations[$name_plural]['type'] === 'has_and_belongs_to_many')
+		{
+			// related HABTM
+			if( ! $model->loaded() || ! $this->loaded() )
+			{
+				return FALSE;
+			}
+
+			$field = $name_plural . '_ids';
+
+			// try to pull
+			if($this->__get($field)->pull($model->_id))
+			{
+				// pull succeed
+				if( isset($this->_related[$name_plural]) )
+				{
+					// Related models have been loaded already, remove this one
+					$related = array();
+					foreach($this->_related[$name_plural] as $key => $object)
+					{
+						if($object->_id === $model->_id)
+						{
+							unset($this->_related[$name_plural]);
+							break;
+						}
+					}
+				}
+
+				if( ! $returned )
+				{
+					// add relation to model as well
+					$model->remove($this,$this->_model,TRUE);
+				}
+			}
+
+			// model has been removed or was already removed
+			return TRUE;
+		}
+		elseif ( isset($this->_fields[$name_plural]) && $this->_fields[$name_plural]['type'] === 'has_many' )
+		{
+			// embedded Has_Many
+			return $this->__get($name_plural)->pull($model);
+		}
+		else
+		{
+			throw new Mango_Exception('model :model has no relation with model :related',
+				array(':model' => $this->_model, ':related' => $name));
+		}
+
+		return FALSE;
+	}
+
+	/**
+	 * Validation callback
+	 *
+	 * Verifies if field is unique
+	 */
+	public function _is_unique(Validate $array, $field)
+	{
+		if ($this->loaded() AND $this->_object[$field] === $array[$field])
+		{
+			// This value is unchanged
+			return TRUE;
+		}
+
+		$found = $this->_db->find_one( $this->_collection, array($field => $array[$field]), array('_id'=>TRUE));
+
+		if($found !== NULL)
+		{
+			$array->error($field,'is_unique');
 		}
 	}
-
-	public function unique_criteria($id)
-	{
-		return array('_id' => $id);
-	}
-
 }
-?>

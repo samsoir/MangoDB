@@ -4,14 +4,14 @@ class Mango_Set extends Mango_ArrayObject {
 
 	protected $_push;
 
-	public function set_saved()
+	public function saved()
 	{
 		$this->_push = NULL;
 		
-		parent::set_saved();
+		parent::saved();
 	}
 
-	public function get_changed($update, array $prefix = array())
+	public function changed($update, array $prefix = array())
 	{
 		if( ! empty($this->_changed) )
 		{
@@ -59,7 +59,7 @@ class Mango_Set extends Mango_ArrayObject {
 			{
 				if($value instanceof Mango_Interface)
 				{
-					$changed = arr::merge($changed, $value->get_changed($update, array_merge($prefix,array($key))));
+					$changed = arr::merge($changed, $value->changed($update, array_merge($prefix,array($key))));
 				}
 			}
 

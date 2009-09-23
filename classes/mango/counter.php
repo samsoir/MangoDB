@@ -36,7 +36,7 @@ class Mango_Counter implements Mango_Interface {
 		return $this->_value;
 	}
 
-	public function get_changed($update, array $prefix = array())
+	public function changed($update, array $prefix = array())
 	{
 		if($update)
 		{
@@ -48,7 +48,7 @@ class Mango_Counter implements Mango_Interface {
 		}
 	}
 
-	public function set_saved()
+	public function saved()
 	{
 		$this->_changed = 0;
 	}

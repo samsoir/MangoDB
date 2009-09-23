@@ -242,6 +242,43 @@ class MangoDB {
 		return $this->get_collection($collection_name)->save($a);
 	}
 
+	public function gridFS( $arg1 = NULL, $arg2 = NULL)
+	{
+		$this->_connected OR $this->connect();
 
+		if (!isset($arg1))
+		{
+			$arg1 = isset($this->_config['gridFS']['arg1'])
+				? $this->_config['gridFS']['arg1']
+				: 'fs';
+		}
+
+		if (!isset($arg2) && isset($this->_config['gridFS']['arg2']))
+		{
+			$arg2 = $this->_config['gridFS']['arg2'];
+		}
+
+		return $this->_db->getGridFS($arg1,$arg2);
+	}
+
+	public function get_file( $criteria )
+	{
+		if(!is_array($criteria))
+		{
+			$criteria = array('filename' => $criteria);
+		}
+
+		return $this->gridFS()->findOne($criteria);
+	}
+
+	public function set_file_bytes($criteria, $bytes)
+	{
+		if(!is_array($criteria))
+		{
+			$criteria = array('filename'=>$criteria);
+		}
+
+		$this->gridFS()->storeBytes($bytes,$criteria);
+	}
 }
 ?>

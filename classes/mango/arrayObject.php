@@ -9,7 +9,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	{
 		if($array instanceof Mango_ArrayObject)
 		{
-			$array = $array->as_array(TRUE);
+			$array = $array->as_array(FALSE);
 		}
 		elseif (!is_array($array))
 		{
@@ -27,7 +27,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	}
 
 	// Implemented by child classes
-	public function get_changed($update, array $prefix = array()) {}
+	public function changed($update, array $prefix = array()) {}
 
 	public function load()
 	{
@@ -78,7 +78,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 				}
 			break;
 			default:
-				$value = is_object($value) ? $value : Mango::factory($this->_type_hint,$value);
+				$value = is_object($value) ? $value : Mango::factory($this->_type_hint,$value,Mango::CLEAN);
 			break;
 		}
 
@@ -90,7 +90,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $this->as_array();
 	}
 
-	public function as_array( $debug = FALSE )
+	public function as_array( $clean = TRUE )
 	{
 		$array = parent::getArrayCopy();
 
@@ -98,14 +98,14 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		{
 			if ($value instanceof Mango_Interface)
 			{
-				$value = $value->as_array( $debug );
+				$value = $value->as_array( $clean );
 			}
 		}
 
 		return $array;
 	}
 
-	public function set_saved()
+	public function saved()
 	{
 		$this->_changed = array();
 
@@ -113,7 +113,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		{
 			if ($value instanceof Mango_Interface)
 			{
-				$value->set_saved();
+				$value->saved();
 			}
 		}
 	}
