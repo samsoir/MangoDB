@@ -310,7 +310,36 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	 * @param  mixed         default value to return if key not found
 	 * @return  mixed        value (if found) or default value
 	 */
-	public function locate($key,$default = NULL)
+	public function locate($key, $default = NULL)
+	{
+		if ( ! is_array($key))
+		{
+			$key = explode('.',(string) $key);
+		}
+
+		// fetch next key
+		$next = array_shift($key);
+
+		// read next key
+		$value = isset($this[$next])
+			? $this[$next]
+			: NULL;
+
+		if ( count($key))
+		{
+			// go deeper
+			$value = $value instanceof Mango_ArrayObject
+				? $value->locate($key,$default,$wildcard)
+				: NULL;
+		}
+
+		// return
+		return $value !== NULL
+			? ($value instanceof Mango_Interface ? $value->as_array() : $value)
+			: $default;
+	}
+
+	/*public function locate($key,$default = NULL)
 	{
 		if( !is_array($key))
 		{
@@ -334,7 +363,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		{
 			return $default;
 		}
-	}
+	}*/
 
 	/*
 	 * Create an (associative) array of values from this array object

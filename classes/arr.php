@@ -111,7 +111,12 @@ class arr extends kohana_arr {
 		return $array;
 	}
 
-	// Recursively removes all NULL values from an array
+	/*
+	 * Recursively removes all (keys with) NULL values from array
+	 *
+	 * @param   array  the source array
+	 * @return  array  the array without NULL values
+	 */
 	public static function filter(array $array)
 	{
 		foreach($array as $key => $value)
@@ -126,5 +131,42 @@ class arr extends kohana_arr {
 			}
 		}
 		return $array;
+	}
+
+	/*
+	 * Matches an array against a key string - wildcard supported
+	 *
+	 * Returns part of array that matches key string
+	 *
+	 * @param   array   the array to search through
+	 * @param   string  the key string (dotnotated)
+	 * @param   string  the wildcard character (defaults to '*')
+	 * @return  array   the part of the source array that matches the key string
+	 */
+	public static function match(array $array, $key, $wildcard = '*')
+	{
+		$match = array();
+
+		if ( ! is_array($key))
+		{
+			$key = explode('.',(string) $key);
+		}
+
+		// fetch next key
+		$next = array_shift($key);
+
+		foreach ( $array as $k => $v)
+		{
+			if ( $k == $next || $next === $wildcard)
+			{
+				$v = count($key)
+					? self::match($v, $key, $wildcard)
+					: $v;
+
+				$match = arr::merge($match, array($k => $v));
+			}
+		}
+
+		return $match;
 	}
 }
