@@ -1,16 +1,29 @@
 <?php
 
+/*
+ * Mango implementation of a Mongo Javascript Array.
+ */
+
 class Mango_Set extends Mango_ArrayObject {
 
+	/*
+	 * Remembers if we are pushing or pulling ($push(All) and $pull(All) cannot happen at the same time)
+	 */
 	protected $_push;
 
+	/*
+	 * Set status to saved
+	 */
 	public function saved()
 	{
 		$this->_push = NULL;
-		
+
 		parent::saved();
 	}
 
+	/*
+	 * Return array of changes
+	 */
 	public function changed($update, array $prefix = array())
 	{
 		if( ! empty($this->_changed) )
@@ -67,6 +80,12 @@ class Mango_Set extends Mango_ArrayObject {
 		}
 	}
 
+	/*
+	 * Updated offsetSet
+	 *
+	 * Does not accept string keys (only numbers)
+	 * Does not accept setting (pushing) when already pulling
+	 */
 	public function offsetSet($index,$newval)
 	{
 		if($this->_push === FALSE)
@@ -101,9 +120,16 @@ class Mango_Set extends Mango_ArrayObject {
 
 		return TRUE;
 	}
-	
+
+	/*
+	 * Updated offsetUnset
+	 *
+	 * Does not accept string keys (only numbers)
+	 * Does not allow unset (pulling) if already adding (pushing)
+	 */
 	public function offsetUnset($index)
 	{
+
 		if($this->_push === TRUE)
 		{
 			// we're already pushing
@@ -111,7 +137,7 @@ class Mango_Set extends Mango_ArrayObject {
 		}
 
 		// sets don't have associative keys
-		if(! is_int($index) && ! is_null($index))
+		if(! ctype_digit($index) && ! is_null($index))
 		{
 			return FALSE;
 		}
@@ -129,20 +155,5 @@ class Mango_Set extends Mango_ArrayObject {
 		$this->_changed[] = $this->offsetGet($index);
 
 		parent::offsetUnset($index);
-	}
-
-	public function push($newval)
-	{
-		return $this->offsetSet(NULL,$newval);
-	}
-
-	public function pull($oldval)
-	{
-		if( ($index = $this->find($this->load_type($oldval))) !== FALSE )
-		{
-			$this->offsetUnset( $index );
-		}
-
-		return TRUE;
 	}
 }

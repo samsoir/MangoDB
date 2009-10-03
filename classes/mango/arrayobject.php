@@ -1,12 +1,31 @@
 <?php
 
+/*
+ * ArrayObject base class used by both Mango_Set (corresponds to Javascript array) and Mango_Array (corresponds to Javascript object)
+ */
+
 class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 
+	/*
+	 * Remembers changes made to this array object (for updating)
+	 */
 	protected $_changed = array();
+
+	/*
+	 * Stores the type of value stored in this array object
+	 */
 	protected $_type_hint;
 
+	/*
+	 * Constructor
+	 *
+	 * @param   array   Current data
+	 * @param   string  Type Hint
+	 * @return  void
+	 */
 	public function __construct($array = array(),$type_hint = NULL)
 	{
+		// Make sure we're dealing with an array
 		if($array instanceof Mango_ArrayObject)
 		{
 			$array = $array->as_array(FALSE);
@@ -15,38 +34,53 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		{
 			$array = array();
 		}
-		
+
+		// create
 		parent::__construct($array,ArrayObject::STD_PROP_LIST);
 
-		$this->_type_hint = strtolower($type_hint);
-
-		if($this->_type_hint !== NULL)
+		if($type_hint !== NULL)
 		{
+			// set typehint
+			$this->_type_hint = strtolower($type_hint);
+
+			// load to make sure values are of correct type
 			$this->load();
 		}
 	}
 
-	// Implemented by child classes
+	/*
+	 * Returns an array with changes - implemented by child classes
+	 */
 	public function changed($update, array $prefix = array()) {}
 
+	/*
+	 * Ensures all values are of correct type
+	 */
 	public function load()
 	{
 		foreach($this as &$value)
 		{
+			// replace by value loaded to correct type
 			$value = $this->load_type($value,$this->_type_hint);
 		}
 	}
 
-	// Tries to detect array type of value; (Mango_)set or (Mango_)array
+	/*
+	 * Autodetects type (set or array)
+	 */
 	public function type_hint(array $value)
 	{
 		return array_keys($value) === range(0, count($value) - 1) ? 'set' : 'array';
 	}
 
+	/*
+	 * Loads a value into correct type
+	 */
 	public function load_type($value)
 	{
 		if($this->_type_hint === NULL)
 		{
+			// no type_hint
 			return $value;
 		}
 
@@ -58,10 +92,12 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			case 'counter':
 				if(is_array($value))
 				{
+					// multidimensional counter
 					$value = $this->type_hint($value) === 'set' ? new Mango_Set($value,$this->_type_hint) : new Mango_Array($value,$this->_type_hint);
 				}
 				else
 				{
+					// simple counter
 					$value = new Mango_Counter($value,$this->_type_hint);
 				}
 			break;
@@ -78,18 +114,29 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 				}
 			break;
 			default:
-				$value = is_object($value) ? $value : Mango::factory($this->_type_hint,$value,Mango::CLEAN);
+				$value = is_object($value) 
+					? $value
+					: Mango::factory($this->_type_hint,$value,Mango::CLEAN);
 			break;
 		}
 
 		return $value;
 	}
 
+	/*
+	 * Returns object as array
+	 */
 	public function getArrayCopy()
 	{
 		return $this->as_array();
 	}
 
+	/*
+	 * Returns object as array
+	 *
+	 * @param   boolean  fetch value directly from object
+	 * @return  array    array representation of array object
+	 */
 	public function as_array( $clean = TRUE )
 	{
 		$array = parent::getArrayCopy();
@@ -105,6 +152,9 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $array;
 	}
 
+	/*
+	 * Set status to saved
+	 */
 	public function saved()
 	{
 		$this->_changed = array();
@@ -118,12 +168,14 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 	}
 
+	/*
+	 * Fetch value
+	 */
 	public function offsetGet($index)
 	{
 		if (! $this->offsetExists($index) )
 		{
-			// multi dimensional array action - implicit set
-			// EG $this->set[1][2] = '3';
+			// implicit set ($array[1][2] = 3)
 			switch($this->_type_hint)
 			{
 				case 'array':
@@ -138,22 +190,26 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 					throw new Kohana_Exception('Set typehint to \'set\', \'array\' or \'counter\' (now: :typehint) to support implicit array creation', 
 						array(':typehint' => $this->_type_hint ? '\''.$this->_type_hint.'\'' : 'not set'));
 			}
-			// we use parent::offsetSet so no change is recorded
-			// (isset($array[12]) should not create a value at key 12)
+			// secretly set value (via parent::offsetSet, so no change is recorded)
 			parent::offsetSet($index,$this->load_type($value));
 		}
 
 		return parent::offsetGet($index);
 	}
 
+	/*
+	 * Set key to value
+	 */
 	public function offsetSet($index,$newval)
 	{
+		// make sure type is correct
 		$newval = $this->load_type($newval);
 
 		if($index !== NULL && $this->offsetExists($index))
 		{
 			$current = $this->offsetGet($index);
-			// return FALSE if new value is the same as current value
+
+			// only update if new data
 			if($current === $newval)
 			{
 				return FALSE;
@@ -168,6 +224,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			}
 		}
 
+		// set
 		parent::offsetSet($index,$newval);
 
 		// on $array[], the $index newval === NULL
@@ -179,8 +236,12 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $index;
 	}
 
+	/*
+	 * Find index of value in array object
+	 */
 	public function find($needle)
 	{
+		// change type so we can compare over ===
 		if ($needle instanceof Mango_Interface)
 		{
 			$needle = $needle->as_array();
@@ -190,6 +251,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			$needle = (string)$needle;
 		}
 
+		// try all keys
 		foreach($this as $key => $val)
 		{
 			if ($val instanceof Mango_Interface)
@@ -203,17 +265,24 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 
 			if ($val === $needle)
 			{
+				// found
 				return $key;
 			}
 		}
 		return FALSE;
 	}
 
+	/*
+	 * Move pointer to end of array and return value
+	 */
 	public function end()
 	{
 		return end($this->as_array());
 	}
 
+	/*
+	 * Pop last value from array and return
+	 */
 	public function pop()
 	{
 		// move pointer to end
@@ -234,7 +303,13 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 	}
 
-	// lookup a / notated key string in a multi dimensional array
+	/*
+	 * Recursively find a dot notated key string
+	 *
+	 * @param  string|array  dot notated keystring or exploded array
+	 * @param  mixed         default value to return if key not found
+	 * @return  mixed        value (if found) or default value
+	 */
 	public function locate($key,$default = NULL)
 	{
 		if( !is_array($key))
@@ -261,9 +336,12 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 	}
 
-	// Return an (associative) array of values
-	// $blog->comments->select_list('id','author');
-	// $blog->comments->select_list('author');
+	/*
+	 * Create an (associative) array of values from this array object
+	 *
+	 * $blog->comments->select_list('id','author');
+	 * $blog->comments->select_list('author');
+	 */
 	public function select_list($key = 'id',$val = NULL)
 	{
 		if($val === NULL)
@@ -289,4 +367,24 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $list;
 	}
 
+	/*
+	 * Push a value onto array, similar to $array[]
+	 */
+	public function push($newval)
+	{
+		return $this->offsetSet(NULL,$newval);
+	}
+
+	/*
+	 * Pull a value from array
+	 */
+	public function pull($oldval)
+	{
+		if( ($index = $this->find($this->load_type($oldval))) !== FALSE )
+		{
+			$this->offsetUnset( $index );
+		}
+
+		return TRUE;
+	}
 }

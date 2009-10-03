@@ -892,7 +892,10 @@ abstract class Mango implements Mango_Interface {
 					$data->rule($name,'email');
 				break;
 				case 'boolean':
-					$data->rule($name,'is_bool');
+					// Checkboxes don't give bools, so is_bool always fails
+					// By setting a label for this value, the value is expected
+					$data->label($name, $name);
+					//$data->rule($name,'is_bool');
 				break;
 				case 'counter':
 					$data->rule($name,'is_int');
@@ -1025,6 +1028,7 @@ abstract class Mango implements Mango_Interface {
 					: Inflector::singular($name);
 
 				$value = new Mango_Set($value, $model);
+				// TODO - switch to array when $unset is available
 			break;
 			case 'counter':
 				$value = new Mango_Counter($value);

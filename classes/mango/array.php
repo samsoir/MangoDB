@@ -1,25 +1,35 @@
 <?php
 
+/*
+ * Mango implementation of a Mongo Javascript Object.
+ */
+
 class Mango_Array extends Mango_ArrayObject {
 
+	/*
+	 * Return array of changes
+	 */
 	public function changed($update, array $prefix = array())
 	{
 		$changed = array();
 
-		// Get all keys of array (current keys + unset keys)
+		// Get a list of all relevant keys (current + unset keys)
+
 		$keys = array();
 		foreach($this as $key => $value)
 		{
 			$keys[] = $key;
 		}
-		$changed_keys = array_keys($this->_changed);
-		// don't use array_unique(array_merge($changed_keys,$keys)) - array_unique has issues with 0 values (eg array_unique( array('a',0,0,'a','c'));
-		$keys = array_merge( $keys, array_diff($changed_keys,$keys) );
+		// don't use array_unique(array_merge(array_keys($this->_changed),$keys)) - array_unique has issues with 0 values (eg array_unique( array('a',0,0,'a','c'));
+		$keys = array_merge( $keys, array_diff( array_keys($this->_changed) ,$keys) );
 
 		// Walk through array
+		
 		foreach($keys as $key)
 		{
-			$value = $this->offsetExists($key) ? $this->offsetGet($key) : NULL;
+			$value = $this->offsetExists($key) 
+				? $this->offsetGet($key) 
+				: NULL;
 
 			if(isset($this->_changed[$key]))
 			{
@@ -30,14 +40,9 @@ class Mango_Array extends Mango_ArrayObject {
 
 				$path = array_merge($prefix,array($key));
 
-				if($update)
-				{
-					$changed = arr::merge($changed, array( '$set' => array( implode('.',$path) => $value) ) );
-				}
-				else
-				{
-					$changed = arr::merge($changed, arr::path_set($path,$value) );
-				}
+				$changed = $update
+					? arr::merge($changed, array( '$set' => array( implode('.',$path) => $value) ) )
+					: arr::merge($changed, arr::path_set($path,$value) );
 			}
 			elseif ($value instanceof Mango_Interface)
 			{
@@ -48,6 +53,9 @@ class Mango_Array extends Mango_ArrayObject {
 		return $changed;
 	}
 
+	/*
+	 * Set a key to value
+	 */
 	public function offsetSet($index,$newval)
 	{
 		if(($index = parent::offsetSet($index,$newval)) !== FALSE)
@@ -57,6 +65,9 @@ class Mango_Array extends Mango_ArrayObject {
 		}
 	}
 
+	/*
+	 * Unset a key
+	 */
 	public function offsetUnset($index)
 	{
 		parent::offsetUnset($index);
@@ -64,6 +75,11 @@ class Mango_Array extends Mango_ArrayObject {
 		$this->_changed[$index] = FALSE;
 	}
 
+	/*
+	 * Updated as_array method
+	 *
+	 * Returns a MongoEmptyObj when array is empty (so that it is still saved as an object)
+	 */
 	public function as_array( $clean = TRUE )
 	{
 		$array = parent::as_array( $clean );
