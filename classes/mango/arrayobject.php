@@ -244,7 +244,8 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		// change type so we can compare over ===
 		if ($needle instanceof Mango_Interface)
 		{
-			$needle = $needle->as_array();
+			// we use false to prevent comparison of MongoEmptyObjs (which always fails)
+			$needle = $needle->as_array( FALSE );
 		}
 		elseif ($needle instanceof MongoId)
 		{
@@ -256,7 +257,8 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		{
 			if ($val instanceof Mango_Interface)
 			{
-				$val = $val->as_array();
+				// we use false to prevent comparison of MongoEmptyObjs (which always fails)
+				$val = $val->as_array( FALSE );
 			}
 			elseif ($val instanceof MongoId)
 			{
