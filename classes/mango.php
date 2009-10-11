@@ -886,22 +886,20 @@ abstract class Mango implements Mango_Interface {
 				case 'float':
 				case 'string':
 				case 'array':
+				case 'object':
 					$data->rule($name,'is_' . $field['type']);
 				break;
 				case 'email':
 					$data->rule($name,'email');
-				break;
-				case 'boolean':
-					// Checkboxes don't give bools, so is_bool always fails
-					// By setting a label for this value, the value is expected
-					$data->label($name, $name);
-					//$data->rule($name,'is_bool');
 				break;
 				case 'counter':
 					$data->rule($name,'is_int');
 				break;
 				case 'set':
 					$data->rule($name,'is_array');
+				break;
+				case 'boolean':
+					$data->rule($name,'Mango::is_bool');
 				break;
 			}
 
@@ -1273,5 +1271,15 @@ abstract class Mango implements Mango_Interface {
 		{
 			$array->error($field,'is_unique');
 		}
+	}
+
+	/*
+	 * Validation rule
+	 *
+	 * A bit more flexible than PHP's is_bool to manage 'booleans' from eg form fields
+	 */
+	public static function is_bool($value)
+	{
+		return in_array($value, array(1,0,'1','0',TRUE,FALSE));
 	}
 }
