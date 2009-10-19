@@ -62,7 +62,9 @@ class MangoDB {
 	public function connect()
 	{
 		if ($this->_connection)
+		{
 			return;
+		}
 
 		// Extract the connection parameters, adding required variabels
 		extract($this->_config + array(
@@ -78,14 +80,22 @@ class MangoDB {
 		$this->_connection = new Mongo($hostnames, FALSE, $persistent, $paired);
 
 		// Set the connection type
-		$connect = $persistent ? ($paired ? 'pairPersistConnect' : 'persistConnect') : ($paired ? 'pairConnect' : 'connect');
+		$connect = $persistent 
+			? ($paired 
+					? 'pairPersistConnect' 
+					: 'persistConnect'
+				)
+			: ($paired 
+					? 'pairConnect' 
+					: 'connect'
+				);
 
 		try
 		{
 			// Try to connect to the database server
 			$this->_connection->$connect();
 		}
-		catch (MongoConnectionException $e)
+		catch ( MongoConnectionException $e)
 		{
 			// Unable to connect to the database server
 			throw new Kohana_Exception('Unable to connect to MongoDB server at :hostnames',
@@ -99,7 +109,7 @@ class MangoDB {
 
 	public function disconnect()
 	{
-		if($this->_connection)
+		if ( $this->_connection)
 		{
 			$this->_connection->close();
 		}
@@ -113,7 +123,7 @@ class MangoDB {
 	{
 		$this->_connected OR $this->connect();
 
-		if(! isset($this->_collections[$name]))
+		if ( ! isset($this->_collections[$name]))
 		{
 			$this->_collections[$name] = $this->_db->selectCollection($name);
 		}
@@ -154,24 +164,32 @@ class MangoDB {
 	{
 		$item = $this->get_collection('cache')->findOne( array('_id'=>$key) );
 
-		return $item ? unserialize($item['v']) : NULL;
+		return $item
+			? unserialize($item['v'])
+			: NULL;
 	}
 
 	/* Mongo */
 
 	public function last_error()
 	{
-		return $this->_connected ? $this->_connection->lastError() : NULL;
+		return $this->_connected
+			? $this->_connection->lastError() 
+			: NULL;
 	}
 
 	public function prev_error()
 	{
-		return $this->_connected ? $this->_connection->prevError() : NULL;
+		return $this->_connected
+			? $this->_connection->prevError()
+			: NULL;
 	}
 	
 	public function reset_error()
 	{
-		return $this->_connected ? $this->_connection->reset_error() : NULL;
+		return $this->_connected
+			? $this->_connection->reset_error()
+			: NULL;
 	}
 
 	/* MongoDB */

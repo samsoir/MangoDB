@@ -740,9 +740,10 @@ abstract class Mango implements Mango_Interface {
 	/**
 	 * Update the current record using the current data.
 	 *
+	 * @param   array  Additional criteria for update
 	 * @return  $this
 	 */
-	public function update()
+	public function update( $criteria = array() )
 	{
 		if($this->_embedded)
 		{
@@ -752,7 +753,9 @@ abstract class Mango implements Mango_Interface {
 
 		if ( $values = $this->changed(TRUE))
 		{
-			$this->_db->update($this->_collection,array('_id'=>$this->_id), $values, TRUE);
+			$criteria['_id'] = $this->_id;
+
+			$this->_db->update($this->_collection, $criteria, $values, FALSE);
 
 			$this->saved();
 		}
@@ -899,7 +902,10 @@ abstract class Mango implements Mango_Interface {
 					$data->rule($name,'is_array');
 				break;
 				case 'boolean':
-					$data->rule($name,'Mango::is_bool');
+					$data->rule($name,'Mango::_is_bool');
+				break;
+				case 'mixed':
+					$data->rule($name,'Mango::_is_mixed');
 				break;
 			}
 
@@ -1278,8 +1284,18 @@ abstract class Mango implements Mango_Interface {
 	 *
 	 * A bit more flexible than PHP's is_bool to manage 'booleans' from eg form fields
 	 */
-	public static function is_bool($value)
+	public static function _is_bool($value)
 	{
 		return in_array($value, array(1,0,'1','0',TRUE,FALSE));
+	}
+
+	/*
+	 * Validation rule
+	 *
+	 * Validates anything not array/object
+	 */
+	public static function _is_mixed($value)
+	{
+		return ! is_array($value) && ! is_object($value);
 	}
 }

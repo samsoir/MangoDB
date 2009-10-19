@@ -159,6 +159,11 @@ class arr extends kohana_arr {
 		{
 			if ( $k == $next || $next === $wildcard)
 			{
+				if ( count($key) && ! is_array($v))
+				{
+					continue;
+				}
+
 				$v = count($key)
 					? self::match($v, $key, $wildcard)
 					: $v;
