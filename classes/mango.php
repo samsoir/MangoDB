@@ -900,7 +900,16 @@ abstract class Mango implements Mango_Interface {
 			throw new Mango_Validate_Exception($this->_model,$array);
 		}
 
-		$object = $array->as_array();
+		$object = array();
+
+		foreach ( $array as $field => $value)
+		{
+			// Don't include NULL values from fields that aren't set anyway
+			if ( $value !== NULL || $this->__isset($field))
+			{
+				$object[$field] = $value;
+			}
+		}
 
 		// Validate embedded objects
 
@@ -945,15 +954,6 @@ abstract class Mango implements Mango_Interface {
 
 		// Merge object & embedded values
 		$array = array_merge($object,$embedded);
-
-		// Remove all NULL values from fields that aren't set anyway
-		foreach ( $array as $field => $value)
-		{
-			if ( $value === NULL && ! $this->__isset($field))
-			{
-				unset($array[$field]);
-			}
-		}
 
 		// Return
 		return $supplied_fields_only
