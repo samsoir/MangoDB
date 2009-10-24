@@ -848,7 +848,7 @@ abstract class Mango implements Mango_Interface {
 	 * @param   boolean  only validate the fields supplied in $data
 	 * @return  array    filtered data
 	 */
-	public function check(array $data = NULL, $update = FALSE)
+	public function check(array $data = NULL, $supplied_fields_only = FALSE)
 	{
 		if($data === NULL)
 		{
@@ -904,9 +904,9 @@ abstract class Mango implements Mango_Interface {
 
 		// Validate embedded objects
 
-		foreach ( $embedded as $field => & $values)
+		foreach ( $embedded as $field => & $value)
 		{
-			if ( ! is_array($values))
+			if ( ! is_array($value))
 			{
 				// Invalid data
 				continue;
@@ -914,12 +914,12 @@ abstract class Mango implements Mango_Interface {
 
 			if ( $this->_fields[$field]['type'] === 'has_one')
 			{
-				$values = Mango::factory($this->_fields[$field]['model'], $values, Mango::EXTEND)
-					->check($values);
+				$value = Mango::factory($this->_fields[$field]['model'], $value, Mango::EXTEND)
+					->check($value);
 			}
 			else
 			{
-				foreach($values as $k => & $v)
+				foreach($value as $k => & $v)
 				{
 					if ( ! is_array($v))
 					{
@@ -946,9 +946,18 @@ abstract class Mango implements Mango_Interface {
 		// Merge object & embedded values
 		$array = array_merge($object,$embedded);
 
+		// Remove all NULL values from fields that aren't set anyway
+		foreach ( $array as $field => $value)
+		{
+			if ( $value === NULL && ! $this->__isset($field))
+			{
+				unset($array[$field]);
+			}
+		}
+
 		// Return
-		return $update === TRUE
-			? array_intersect_key($array,$data)
+		return $supplied_fields_only
+			? array_intersect_key($array,$values)
 			: $array;
 	}
 
@@ -1099,10 +1108,6 @@ abstract class Mango implements Mango_Interface {
 				$value = trim((string) $value);
 			break;
 			case 'has_one':
-				//$model = isset($field['model'])
-				//	? $field['model']
-				//	: $name;
-
 				if(is_array($value))
 				{
 					$value = Mango::factory($field['model'], $value, Mango::CLEAN);
@@ -1114,10 +1119,6 @@ abstract class Mango implements Mango_Interface {
 				}
 			break;
 			case 'has_many':
-				//$model = isset($field['model']) 
-				//	? $field['model'] 
-				//	: Inflector::singular($name);
-
 				$value = new Mango_Set($value, $field['model']);
 				// TODO - switch to array when $unset is available
 			break;
