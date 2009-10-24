@@ -129,7 +129,6 @@ class Mango_Set extends Mango_ArrayObject {
 	 */
 	public function offsetUnset($index)
 	{
-
 		if($this->_push === TRUE)
 		{
 			// we're already pushing
@@ -137,7 +136,7 @@ class Mango_Set extends Mango_ArrayObject {
 		}
 
 		// sets don't have associative keys
-		if(! ctype_digit($index) && ! is_null($index))
+		if(! ctype_digit((string)$index) && ! is_null($index))
 		{
 			return FALSE;
 		}

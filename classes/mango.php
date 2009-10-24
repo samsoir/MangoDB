@@ -401,6 +401,18 @@ abstract class Mango implements Mango_Interface {
 			$this->_model = strtolower(substr(get_class($this), 6));
 		}
 
+		foreach ( $this->_fields as $name => & $field)
+		{
+			if ( $field['type'] === 'has_one' && ! isset($field['model']))
+			{
+				$field['model'] = $name;
+			}
+			elseif ( $field['type'] === 'has_many' && ! isset($field['model']))
+			{
+				$field['model'] = Inflector::singular($name);
+			}
+		}
+
 		if (!$this->_embedded )
 		{
 			if ( ! $this->_collection)
@@ -629,6 +641,14 @@ abstract class Mango implements Mango_Interface {
 
 		$criteria = $this->changed(FALSE);
 
+		if ( isset($criteria['_id']))
+		{
+			// if ID is set, we don't need any other value
+			$criteria = array(
+				'_id' => $criteria['_id']
+			);
+		}
+
 		// resets $this->_changed array
 		$this->clear();
 
@@ -658,7 +678,7 @@ abstract class Mango implements Mango_Interface {
 		}
 	}
 
-	public function reload()
+	/*public function reload()
 	{
 		if ( ! $this->_init)
 		{
@@ -670,7 +690,7 @@ abstract class Mango implements Mango_Interface {
 			throw new Mango_Exception(':name model is embedded and cannot be reloaded from database',
 				array(':name' => $this->_model));
 		}
-		elseif( ! $this->loaded())
+		elseif( ! $this->loaded() && )
 		{
 			throw new Mango_Exception(':name model is not loaded and thus cannot be reloaded from database',
 				array(':name' => $this->_model));
@@ -686,7 +706,7 @@ abstract class Mango implements Mango_Interface {
 		return $values === NULL
 			? $this
 			: $this->values($values, TRUE);
-	}
+	}*/
 
 	/**
 	 * Create a new record using the current data.
@@ -821,7 +841,7 @@ abstract class Mango implements Mango_Interface {
 	}
 
 	/**
-	 * Check the given data is valid.
+	 * Check the given data is valid. Recursively checks embedded objects as well
 	 *
 	 * @throws  Validate_Exception  when an error is found
 	 * @param   array    data to check, field => value
@@ -850,19 +870,86 @@ abstract class Mango implements Mango_Interface {
 			$values = $data;
 		}
 
-		$array = Validate::factory($values);
+		// Split $values into embedded objects, and object itself
+
+		$object   = array();
+		$embedded = array();
+
+		foreach ( $values as $field => $value)
+		{
+			if ( $this->_fields[$field]['type'] === 'has_one' || $this->_fields[$field]['type'] === 'has_many')
+			{
+				$embedded[$field] = $value;
+			}
+			else
+			{
+				$object[$field] = $value;
+			}
+		}
+
+		// Validate object
+
+		$array = Validate::factory($object);
 
 		// Add validation rules
 		$array = $this->_check($array);
 
 		if ( ! $array->check())
 		{
-			throw new Validate_Exception($array);
+			// Validation failed
+			throw new Mango_Validate_Exception($this->_model,$array);
 		}
 
+		$object = $array->as_array();
+
+		// Validate embedded objects
+
+		foreach ( $embedded as $field => & $values)
+		{
+			if ( ! is_array($values))
+			{
+				// Invalid data
+				continue;
+			}
+
+			if ( $this->_fields[$field]['type'] === 'has_one')
+			{
+				$values = Mango::factory($this->_fields[$field]['model'], $values, Mango::EXTEND)
+					->check($values);
+			}
+			else
+			{
+				foreach($values as $k => & $v)
+				{
+					if ( ! is_array($v))
+					{
+						// Invalid data
+						continue;
+					}
+
+					$model = Mango::factory($this->_fields[$field]['model'],$v,Mango::EXTEND);
+
+					try
+					{
+						$v = $model->check($v);
+					}
+					catch ( Mango_Validate_Exception $e)
+					{
+						// add sequence number of failed object to exception
+						$e->seq = $k;
+						throw $e;
+					}
+				}
+			}
+		}
+
+		// Merge object & embedded values
+		$array = array_merge($object,$embedded);
+
+		// Return
 		return $update === TRUE
-			? array_intersect_key($array->as_array(),$data)
-			: $array->as_array();
+			? array_intersect_key($array,$data)
+			: $array;
 	}
 
 	/**
@@ -1012,26 +1099,26 @@ abstract class Mango implements Mango_Interface {
 				$value = trim((string) $value);
 			break;
 			case 'has_one':
-				$model = isset($field['model'])
-					? $field['model']
-					: $name;
+				//$model = isset($field['model'])
+				//	? $field['model']
+				//	: $name;
 
 				if(is_array($value))
 				{
-					$value = Mango::factory($model, $value, Mango::CLEAN);
+					$value = Mango::factory($field['model'], $value, Mango::CLEAN);
 				}
 
-				if( ! $value instanceof Mango || (string) $value !== $model )
+				if( ! $value instanceof Mango || (string) $value !== $field['model'] )
 				{
 					$value = NULL;
 				}
 			break;
 			case 'has_many':
-				$model = isset($field['model']) 
-					? $field['model'] 
-					: Inflector::singular($name);
+				//$model = isset($field['model']) 
+				//	? $field['model'] 
+				//	: Inflector::singular($name);
 
-				$value = new Mango_Set($value, $model);
+				$value = new Mango_Set($value, $field['model']);
 				// TODO - switch to array when $unset is available
 			break;
 			case 'counter':
@@ -1042,6 +1129,11 @@ abstract class Mango implements Mango_Interface {
 			break;
 			case 'set':
 				$value = new Mango_Set($value, isset($field['type_hint']) ? $field['type_hint'] : NULL);
+			break;
+			case 'mixed':
+				$value = ! is_object($value)
+					? $value
+					: NULL;
 			break;
 		}
 
@@ -1292,10 +1384,10 @@ abstract class Mango implements Mango_Interface {
 	/*
 	 * Validation rule
 	 *
-	 * Validates anything not array/object
+	 * Validates anything not object
 	 */
 	public static function _is_mixed($value)
 	{
-		return ! is_array($value) && ! is_object($value);
+		return ! is_object($value);
 	}
 }
