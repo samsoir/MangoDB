@@ -698,11 +698,6 @@ abstract class Mango implements Mango_Interface {
 		// resets $this->_changed array
 		$this->clear();
 
-		if ( empty($criteria))
-		{
-			return $this;
-		}
-
 		if ( $limit === 1)
 		{
 			$values = $this->_db->find_one($this->_collection,$criteria,$fields);
