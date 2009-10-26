@@ -650,6 +650,12 @@ abstract class Mango implements Mango_Interface {
 				array(':name' => $this->_model));
 		}
 
+		// If load() is called after wakeup, db hasn't been initialized yet
+		if ( ! $this->_init)
+		{
+			$this->init();
+		}
+
 		$criteria = $this->changed(FALSE);
 
 		if ( isset($criteria['_id']))
@@ -662,6 +668,11 @@ abstract class Mango implements Mango_Interface {
 
 		// resets $this->_changed array
 		$this->clear();
+
+		if ( empty($criteria))
+		{
+			return $this;
+		}
 
 		if ( $limit === 1)
 		{
