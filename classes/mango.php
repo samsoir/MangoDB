@@ -165,6 +165,16 @@ abstract class Mango implements Mango_Interface {
 	}
 
 	/**
+	 * Restores model data
+	 *
+	 * @return  void
+	 */
+	public function __wakeup()
+	{
+		$this->init();
+	}
+
+	/**
 	 * Checks if a field is set
 	 *
 	 * @return  boolean  field is set
@@ -638,6 +648,31 @@ abstract class Mango implements Mango_Interface {
 	}
 
 	/**
+	 * Reload model from database
+	 *
+	 * @return  $this
+	 */
+	public function reload()
+	{
+		if ( $this->_embedded)
+		{
+			throw new Mango_Exception(':name model is embedded and cannot be reloaded from database',
+				array(':name' => $this->_model));
+		}
+		elseif ( ! isset($this->_id))
+		{
+			throw new Mango_Exception(':name model cannot be reloaded, _id value missing',
+				array(':name' => $this->_model));
+		}
+
+		$this->_changed = array(
+			'_id' => TRUE
+		);
+
+		return $this->load();
+	}
+
+	/**
 	 * Load a (set of) record(s) from the database
 	 *
 	 * @return  $this
@@ -648,12 +683,6 @@ abstract class Mango implements Mango_Interface {
 		{
 			throw new Mango_Exception(':name model is embedded and cannot be loaded from database',
 				array(':name' => $this->_model));
-		}
-
-		// If load() is called after wakeup, db hasn't been initialized yet
-		if ( ! $this->_init)
-		{
-			$this->init();
 		}
 
 		$criteria = $this->changed(FALSE);
