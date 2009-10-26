@@ -214,6 +214,17 @@ abstract class Mango implements Mango_Interface {
 	}
 
 	/**
+	 * Return TRUE if field has been changed
+	 *
+	 * @param   string   field name
+	 * @return  boolean  field has been changed
+	 */
+	public function is_changed($field)
+	{
+		return isset($this->_changed[$field]);
+	}
+
+	/**
 	 * Return db reference
 	 *
 	 * @return  MangoDB  database object
@@ -554,9 +565,9 @@ abstract class Mango implements Mango_Interface {
 
 	/**
 	 * Get all of the changed fields as an associative array.
-	 * @param  boolean  structure array for update (using modifiers/dot notation)
+	 *
+	 * @param  boolean  indicate update (TRUE) or insert (FALSE) - (determines use of modifiers like $set/$inc)
 	 * @param  array    prefix data, used internally
-	 
 	 * @return  array  field => value
 	 */
 	public function changed($update, array $prefix= array())
