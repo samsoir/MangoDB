@@ -675,9 +675,13 @@ abstract class Mango implements Mango_Interface {
 	/**
 	 * Load a (set of) record(s) from the database
 	 *
-	 * @return  $this
+	 * @param   mixed  limit the (maximum) number of models returned
+	 * @param   array  sorts models on specified fields array( field => 1/-1 )
+	 * @param   array  specify the fields to return
+	 * @param   array  specify additional criteria
+	 * @return  mixed  if limit = 1, returns $this, otherwise returns iterator
 	 */
-	public function load($limit = 1, array $sort = NULL, array $fields = array())
+	public function load($limit = 1, array $sort = NULL, array $fields = array(), array $criteria = array())
 	{
 		if($this->_embedded)
 		{
@@ -685,7 +689,7 @@ abstract class Mango implements Mango_Interface {
 				array(':name' => $this->_model));
 		}
 
-		$criteria = $this->changed(FALSE);
+		$criteria += $this->changed(FALSE);
 
 		if ( isset($criteria['_id']))
 		{
