@@ -264,14 +264,14 @@ class MangoDB {
 	{
 		$this->_connected OR $this->connect();
 
-		if (!isset($arg1))
+		if ( ! isset($arg1))
 		{
 			$arg1 = isset($this->_config['gridFS']['arg1'])
 				? $this->_config['gridFS']['arg1']
 				: 'fs';
 		}
 
-		if (!isset($arg2) && isset($this->_config['gridFS']['arg2']))
+		if ( ! isset($arg2) && isset($this->_config['gridFS']['arg2']))
 		{
 			$arg2 = $this->_config['gridFS']['arg2'];
 		}
@@ -281,7 +281,7 @@ class MangoDB {
 
 	public function get_file( $criteria )
 	{
-		if(!is_array($criteria))
+		if ( ! is_array($criteria))
 		{
 			$criteria = array('filename' => $criteria);
 		}
@@ -289,14 +289,25 @@ class MangoDB {
 		return $this->gridFS()->findOne($criteria);
 	}
 
-	public function set_file_bytes($criteria, $bytes)
+	public function set_file_bytes($extra, $bytes)
 	{
-		if(!is_array($criteria))
+		if ( ! is_array($extra))
 		{
-			$criteria = array('filename'=>$criteria);
+			$extra = array('filename' => $extra);
 		}
 
-		$this->gridFS()->storeBytes($bytes,$criteria);
+		$this->gridFS()->storeBytes($bytes,$extra);
 	}
+
+	public function set_file($filename, array $extra = array())
+	{
+		return $this->gridFS()->storeFile($filename,$extra);
+	}
+
+	public function remove_file( array $criteria = array(), $just_one = FALSE)
+	{
+		return $this->gridFS()->remove($criteria, $just_one);
+	}
+
 }
 ?>
