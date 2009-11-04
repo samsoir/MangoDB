@@ -36,7 +36,9 @@ class Mango_Array extends Mango_ArrayObject {
 				// value has been changed (set/unset)
 				// todo add $unset when available (now unset vars are set to NULL
 
-				$value = $value instanceof Mango_Interface ? $value->as_array() : $value;
+				$value = $value instanceof Mango_Interface
+					? $value->as_array()
+					: $value;
 
 				$path = array_merge($prefix,array($key));
 

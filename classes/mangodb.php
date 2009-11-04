@@ -279,24 +279,14 @@ class MangoDB {
 		return $this->_db->getGridFS($arg1,$arg2);
 	}
 
-	public function get_file( $criteria )
+	public function get_file(array $criteria = array())
 	{
-		if ( ! is_array($criteria))
-		{
-			$criteria = array('filename' => $criteria);
-		}
-
 		return $this->gridFS()->findOne($criteria);
 	}
 
-	public function set_file_bytes($extra, $bytes)
+	public function set_file_bytes($bytes, array $extra = array())
 	{
-		if ( ! is_array($extra))
-		{
-			$extra = array('filename' => $extra);
-		}
-
-		$this->gridFS()->storeBytes($bytes,$extra);
+		return $this->gridFS()->storeBytes($bytes,$extra);
 	}
 
 	public function set_file($filename, array $extra = array())
