@@ -176,9 +176,8 @@ class MangoDB {
 	public function batch_insert ( $collection_name, array $a )
 	{
 		return $this->_call('batch_insert', array(
-			'collection_name' => $collection_name,
-			'a'               => $a
-		));
+			'collection_name' => $collection_name
+		), $a);
 	}
 
 	public function count( $collection_name, array $query = array(), array $fields = array() )
@@ -224,17 +223,15 @@ class MangoDB {
 		return $this->_call('update', array(
 			'collection_name' => $collection_name,
 			'criteria'        => $criteria,
-			'newObj'          => $newObj,
 			'upsert'          => $upsert
-		));
+		), $newObj);
 	}
 
 	public function insert($collection_name, array $a)
 	{
 		return $this->_call('insert', array(
-			'collection_name' => $collection_name,
-			'a'               => $a,
-		));
+			'collection_name' => $collection_name
+		), $a);
 	}
 
 	public function remove($collection_name, array $criteria, $justOne = FALSE)
@@ -249,9 +246,8 @@ class MangoDB {
 	public function save($collection_name, array $a)
 	{
 		return $this->_call('save', array(
-			'collection_name' => $collection_name,
-			'a'               => $a,
-		));
+			'collection_name' => $collection_name
+		), $a);
 	}
 
 	/* File management */
@@ -312,7 +308,7 @@ class MangoDB {
 	 *
 	 * This allows for easy benchmarking
 	 */
-	protected function _call($command, array $arguments = array())
+	protected function _call($command, array $arguments = array(), array $values = NULL)
 	{
 		$this->_connected OR $this->connect();
 
@@ -344,7 +340,7 @@ class MangoDB {
 				$r = $this->_db->execute($code,$args);
 			break;
 			case 'batch_insert':
-				$r = $c->batchInsert($a);
+				$r = $c->batchInsert($values);
 			break;
 			case 'count':
 				$r = $c->count($query,$fields);
@@ -359,16 +355,16 @@ class MangoDB {
 				$r = $c->group($keys,$initial,$reduce,$condition);
 			break;
 			case 'update':
-				$r = $c->update($criteria, $newObj, $upsert);
+				$r = $c->update($criteria, $values, $upsert);
 			break;
 			case 'insert':
-				$r = $c->insert($a);
+				$r = $c->insert($values);
 			break;
 			case 'remove':
 				$r = $c->remove($criteria,$justOne);
 			break;
 			case 'save':
-				$r = $c->save($a);
+				$r = $c->save($values);
 			break;
 			case 'get_file':
 				$r = $this->gridFS()->findOne($criteria);
