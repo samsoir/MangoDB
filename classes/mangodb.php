@@ -33,9 +33,6 @@ class MangoDB {
 	// Raw database connection;
 	protected $_db;
 
-	// Collection objects
-	protected $_collections = array();
-
 	// Store config locally
 	protected $_config;
 
@@ -119,57 +116,7 @@ class MangoDB {
 		$this->_collections = array();
 	}
 
-	public function get_collection($name)
-	{
-		$this->_connected OR $this->connect();
-
-		if ( ! isset($this->_collections[$name]))
-		{
-			$this->_collections[$name] = $this->_db->selectCollection($name);
-		}
-
-		return $this->_collections[$name];
-	}
-
-	/* A simple cache
-	 *
-	 * Best performance if you create the collection 'cache' yourself
-	 * and make it a capped collection.
-	 * See: http://www.mongodb.org/display/DOCS/Capped+Collections
-	 *
-	 * Please note there are some limits with capped collections:
-	 * "You may update the existing objects in the collection. However, 
-	 *  the objects must not grow in size. If they do, the update will 
-	 *  fail. (There are some possible workarounds; contact us in the 
-	 *  support forums for more information, if help is needed.)"
-	 *
-	 * The key is to create enough padding in the object, so that 
-	 * whenever it is updated, there is enough space left for the update
-	 */
-
-	/* Store object: $value in cache under key: $key
-	 * Use the $size parameter to set the total length (serialized string length)
-	 * If the actual object has a smaller length, it will be padded with spaces
-	 * allowing future updates
-	 */
-	public function cache_set($key,$value,$size = 100)
-	{
-		$this->get_collection('cache')->save(array(
-			'_id' => $key,
-			'v'   => str_pad(serialize($value),$size)
-		));
-	}
-
-	public function cache_get($key)
-	{
-		$item = $this->get_collection('cache')->findOne( array('_id'=>$key) );
-
-		return $item
-			? unserialize($item['v'])
-			: NULL;
-	}
-
-	/* Mongo */
+	/* Database Management */
 
 	public function last_error()
 	{
@@ -192,73 +139,122 @@ class MangoDB {
 			: NULL;
 	}
 
-	/* MongoDB */
-	public function create_collection ( string $collection_name, $capped= FALSE, $size= 0, $max= 0 )
+	public function ensure_index ( $collection_name, $keys )
 	{
-		return $this->_db->createCollection($collection_name,$capped,$size,$max);
-	}
-
-	public function drop_collection( $collection_name )
-	{
-		return $this->_db->dropCollection($collection_name);
+		return $this->_db->selectCollection($collection_name)->ensureIndex($keys);
 	}
 
 	public function execute( $code, array $args = array() )
 	{
-		return $this->_db->execute($code,$args);
+		return $this->_call('execute', array(
+			'code' => $code,
+			'args' => $args
+		));
 	}
 
-	/* MongoCollection */
+	/* Collection management */
 
-	public function ensure_index ( $collection_name, $keys )
+	public function create_collection ( string $name, $capped= FALSE, $size= 0, $max= 0 )
 	{
-		return $this->_get_collection($collection_name)->ensureIndex($keys);
+		return $this->_call('createCollection', array(
+			'name'    => $name,
+			'capped'  => $capped,
+			'size'    => $size,
+			'max'     => $max
+		));
 	}
+
+	public function drop_collection( $name )
+	{
+		return $this->_call('drop_collection', array(
+			'name' => $name
+		));
+	}
+
+	/* Data Management */
 
 	public function batch_insert ( $collection_name, array $a )
 	{
-		return $this->get_collection($collection_name)->batchInsert($a);
+		return $this->_call('batch_insert', array(
+			'collection_name' => $collection_name,
+			'a'               => $a
+		));
 	}
 
 	public function count( $collection_name, array $query = array(), array $fields = array() )
 	{
-		return $this->get_collection($collection_name)->count($query,$fields);
+		return $this->_call('count', array(
+			'collection_name' => $collection_name,
+			'query'           => $query,
+			'fields'          => $fields
+		));
 	}
 
 	public function find_one($collection_name, array $query = array(), array $fields = array())
 	{
-		return $this->get_collection($collection_name)->findOne($query,$fields);
+		return $this->_call('find_one', array(
+			'collection_name' => $collection_name,
+			'query'           => $query,
+			'fields'          => $fields
+		));
 	}
 
-	public function find($collection_name, array $criteria = array(), array $fields = array())
+	public function find($collection_name, array $query = array(), array $fields = array())
 	{
-		return $this->get_collection($collection_name)->find($criteria,$fields);
+		return $this->_call('find', array(
+			'collection_name' => $collection_name,
+			'query'           => $query,
+			'fields'          => $fields
+		));
 	}
 
-	public function group ( array $keys , array $initial , string $reduce, array $condition= array() )
+	public function group( $collection_name, array $keys , array $initial , string $reduce, array $condition= array() )
 	{
-		return $this->get_collection($collection_name)->group($keys,$initial,$reduce,$condition);
+		return $this->_call('group', array(
+			'collection_name' => $collection_name,
+			'keys'            => $keys,
+			'initial'         => $initial,
+			'reduce'          => $reduce,
+			'condition'       => $condition
+		));
 	}
 
 	public function update($collection_name, array $criteria, array $newObj, $upsert = FALSE)
 	{
-		return $this->get_collection($collection_name)->update($criteria,$newObj,$upsert);
+		return $this->_call('update', array(
+			'collection_name' => $collection_name,
+			'criteria'        => $criteria,
+			'newObj'          => $newObj,
+			'upsert'          => $upsert
+		));
 	}
 
 	public function insert($collection_name, array $a)
 	{
-		return $this->get_collection($collection_name)->insert($a);
+		return $this->_call('insert', array(
+			'collection_name' => $collection_name,
+			'a'               => $a,
+		));
 	}
 
 	public function remove($collection_name, array $criteria, $justOne = FALSE)
 	{
-		return $this->get_collection($collection_name)->remove($criteria,$justOne);
+		return $this->_call('remove', array(
+			'collection_name' => $collection_name,
+			'criteria'        => $criteria,
+			'justOne'         => $justOne
+		));
 	}
 
 	public function save($collection_name, array $a)
 	{
-		return $this->get_collection($collection_name)->save($a);
+		return $this->_call('save', array(
+			'collection_name' => $collection_name,
+			'a'               => $a,
+		));
 	}
+
+	/* File management */
 
 	public function gridFS( $arg1 = NULL, $arg2 = NULL)
 	{
@@ -281,23 +277,119 @@ class MangoDB {
 
 	public function get_file(array $criteria = array())
 	{
-		return $this->gridFS()->findOne($criteria);
+		return $this->_call('get_file', array(
+			'criteria' => $criteria
+		));
 	}
 
 	public function set_file_bytes($bytes, array $extra = array())
 	{
-		return $this->gridFS()->storeBytes($bytes,$extra);
+		return $this->_call('set_file_bytes', array(
+			'bytes' => $bytes,
+			'extra' => $extra
+		));
 	}
 
 	public function set_file($filename, array $extra = array())
 	{
-		return $this->gridFS()->storeFile($filename,$extra);
+		return $this->_call('set_file', array(
+			'filename' => $filename,
+			'extra'    => $extra
+		));
 	}
 
-	public function remove_file( array $criteria = array(), $just_one = FALSE)
+	public function remove_file( array $criteria = array(), $justOne = FALSE)
 	{
-		return $this->gridFS()->remove($criteria, $just_one);
+		return $this->_call('remove_file', array(
+			'criteria' => $criteria,
+			'justOne'  => $justOne
+		));
 	}
 
+	/* 
+	 * All commands for which benchmarking could be useful
+	 * are executed by this method
+	 *
+	 * This allows for easy benchmarking
+	 */
+	protected function _call($command, array $arguments = array())
+	{
+		$this->_connected OR $this->connect();
+
+		extract($arguments);
+
+		if ( ! empty($this->_config['profiling']))
+		{
+			$_bm_name = isset($collection_name)
+			 ? $collection_name . '.' . $command
+			 : $command;
+
+			$_bm = Profiler::start("MangoDB {$this->_name}",$_bm_name);
+		}
+
+		if ( isset($collection_name))
+		{
+			$c = $this->_db->selectCollection($collection_name);
+		}
+
+		switch ( $command)
+		{
+			case 'create_collection':
+				$r = $this->_db->createCollection($name,$capped,$size,$max);
+			break;
+			case 'drop_collection':
+				$r = $this->_db->dropCollection($name);
+			break;
+			case 'execute':
+				$r = $this->_db->execute($code,$args);
+			break;
+			case 'batch_insert':
+				$r = $c->batchInsert($a);
+			break;
+			case 'count':
+				$r = $c->count($query,$fields);
+			break;
+			case 'find_one':
+				$r = $c->findOne($query,$fields);
+			break;
+			case 'find':
+				$r = $c->find($query,$fields);
+			break;
+			case 'group':
+				$r = $c->group($keys,$initial,$reduce,$condition);
+			break;
+			case 'update':
+				$r = $c->update($criteria, $newObj, $upsert);
+			break;
+			case 'insert':
+				$r = $c->insert($a);
+			break;
+			case 'remove':
+				$r = $c->remove($criteria,$justOne);
+			break;
+			case 'save':
+				$r = $c->save($a);
+			break;
+			case 'get_file':
+				$r = $this->gridFS()->findOne($criteria);
+			break;
+			case 'set_file_bytes':
+				$r = $this->gridFS()->storeBytes($bytes,$extra);
+			break;
+			case 'set_file':
+				$r = $this->gridFS()->storeFile($filename,$extra);
+			break;
+			case 'remove_file':
+				$r = $this->gridFS()->remove($criteria, $justOne);
+			break;
+		}
+
+		if ( isset($_bm))
+		{
+			Profiler::stop($_bm);
+		}
+
+		return $r;
+	}
 }
 ?>
