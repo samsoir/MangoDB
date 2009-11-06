@@ -904,7 +904,7 @@ abstract class Mango implements Mango_Interface {
 		{
 			$values = $this->as_array( FALSE );
 		}
-		elseif ($update === TRUE)
+		elseif ($supplied_fields_only === TRUE)
 		{
 			/**
 			 * We always have to validate a complete object
