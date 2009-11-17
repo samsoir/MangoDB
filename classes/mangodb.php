@@ -156,7 +156,7 @@ class MangoDB {
 
 	public function create_collection ( string $name, $capped= FALSE, $size= 0, $max= 0 )
 	{
-		return $this->_call('createCollection', array(
+		return $this->_call('create_collection', array(
 			'name'    => $name,
 			'capped'  => $capped,
 			'size'    => $size,
