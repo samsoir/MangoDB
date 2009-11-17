@@ -728,36 +728,6 @@ abstract class Mango implements Mango_Interface {
 		}
 	}
 
-	/*public function reload()
-	{
-		if ( ! $this->_init)
-		{
-			$this->init();
-		}
-
-		if($this->_embedded)
-		{
-			throw new Mango_Exception(':name model is embedded and cannot be reloaded from database',
-				array(':name' => $this->_model));
-		}
-		elseif( ! $this->loaded() && )
-		{
-			throw new Mango_Exception(':name model is not loaded and thus cannot be reloaded from database',
-				array(':name' => $this->_model));
-		}
-
-		// reload
-		$values = $this->_db->find_one($this->_collection, array('_id' => $this->_id));
-
-		// clear
-		$this->clear();
-
-		// return
-		return $values === NULL
-			? $this
-			: $this->values($values, TRUE);
-	}*/
-
 	/**
 	 * Create a new record using the current data.
 	 *
