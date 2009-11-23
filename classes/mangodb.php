@@ -121,21 +121,21 @@ class MangoDB {
 	public function last_error()
 	{
 		return $this->_connected
-			? $this->_connection->lastError() 
+			? $this->_db->lastError() 
 			: NULL;
 	}
 
 	public function prev_error()
 	{
 		return $this->_connected
-			? $this->_connection->prevError()
+			? $this->_db->prevError()
 			: NULL;
 	}
 	
 	public function reset_error()
 	{
 		return $this->_connected
-			? $this->_connection->reset_error()
+			? $this->_db->resetError()
 			: NULL;
 	}
 
@@ -218,12 +218,12 @@ class MangoDB {
 		));
 	}
 
-	public function update($collection_name, array $criteria, array $newObj, $upsert = FALSE)
+	public function update($collection_name, array $criteria, array $newObj, $options = array())
 	{
 		return $this->_call('update', array(
 			'collection_name' => $collection_name,
 			'criteria'        => $criteria,
-			'upsert'          => $upsert
+			'options'         => $options
 		), $newObj);
 	}
 
@@ -355,7 +355,7 @@ class MangoDB {
 				$r = $c->group($keys,$initial,$reduce,$condition);
 			break;
 			case 'update':
-				$r = $c->update($criteria, $values, $upsert);
+				$r = $c->update($criteria, $values, $options);
 			break;
 			case 'insert':
 				$r = $c->insert($values);
