@@ -331,7 +331,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		{
 			// go deeper
 			$value = $value instanceof Mango_ArrayObject
-				? $value->locate($key,$default,$wildcard)
+				? $value->locate($key,$default)
 				: NULL;
 		}
 
@@ -340,32 +340,6 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			? ($value instanceof Mango_Interface ? $value->as_array() : $value)
 			: $default;
 	}
-
-	/*public function locate($key,$default = NULL)
-	{
-		if( !is_array($key))
-		{
-			$key = explode('.',(string)$key);
-		}
-
-		$next = array_shift($key);
-
-		if(isset($this[$next]))
-		{
-			if(count($key))
-			{
-				return $this[$next] instanceof Mango_ArrayObject ? $this[$next]->locate($key) : NULL;
-			}
-			else
-			{
-				return $this[$next];
-			}
-		}
-		else
-		{
-			return $default;
-		}
-	}*/
 
 	/*
 	 * Create an (associative) array of values from this array object
