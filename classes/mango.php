@@ -673,7 +673,7 @@ abstract class Mango implements Mango_Interface {
 	}
 
 	/**
-	 * Load a (set of) record(s) from the database
+	 * Load a (set of) document(s) from the database
 	 *
 	 * @param   mixed  limit the (maximum) number of models returned
 	 * @param   array  sorts models on specified fields array( field => 1/-1 )
@@ -729,7 +729,7 @@ abstract class Mango implements Mango_Interface {
 	}
 
 	/**
-	 * Create a new record using the current data.
+	 * Create a new document using the current data.
 	 *
 	 * @return  $this
 	 */
@@ -778,7 +778,7 @@ abstract class Mango implements Mango_Interface {
 	}
 
 	/**
-	 * Update the current record using the current data.
+	 * Update the current document using the current data.
 	 *
 	 * @param   array  Additional criteria for update
 	 * @return  $this
@@ -804,7 +804,7 @@ abstract class Mango implements Mango_Interface {
 	}
 
 	/**
-	 * Delete the current record using the current data.
+	 * Delete the current document using the current data.
 	 *
 	 * @return  $this
 	 */
