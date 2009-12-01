@@ -80,14 +80,14 @@ class Mango_Array extends Mango_ArrayObject {
 	/*
 	 * Updated as_array method
 	 *
-	 * Returns a MongoEmptyObj when array is empty (so that it is still saved as an object)
+	 * (empty Mango_Arrays (equivalent of JS objects) are converted to object to ensure they're saved correctly)
 	 */
 	public function as_array( $clean = TRUE )
 	{
 		$array = parent::as_array( $clean );
 
 		return $clean && ! count($array) 
-			? new MongoEmptyObj 
+			? (object) array() 
 			: $array;
 	}
 }

@@ -560,7 +560,7 @@ abstract class Mango implements Mango_Interface {
 				: ($clean ? $value : $this->__get($name));
 		}
 
-		return count($array) || !$clean ? $array : new MongoEmptyObj;
+		return count($array) || !$clean ? $array : (object) array();
 	}
 
 	/**
