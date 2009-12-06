@@ -308,24 +308,24 @@ abstract class Mango implements Mango_Interface {
 				switch($relation['type'])
 				{
 					case 'has_one':
-						$values = array($this->_model . '_id' => $this->_id);
+						$criteria = array($this->_model . '_id' => $this->_id);
 						$limit = 1;
 					break;
 					case 'belongs_to':
-						$values = array('_id' => $this->_object[$name . '_id']);
+						$criteria = array('_id' => $this->_object[$name . '_id']);
 						$limit = 1;
 					break;
 					case 'has_many':
-						$values = array($this->_model . '_id' => $this->_id);
+						$criteria = array($this->_model . '_id' => $this->_id);
 						$limit = FALSE;
 					break;
 					case 'has_and_belongs_to_many':
-						$values = array('_id' => array('$in' => $this->__get($name . '_ids')->as_array()));
+						$criteria = array('_id' => array('$in' => $this->__get($name . '_ids')->as_array()));
 						$limit = FALSE;
 					break;
 				}
 
-				$this->_related[$name] = Mango::factory($relation['model'],$values)->load($limit);
+				$this->_related[$name] = Mango::factory($relation['model'])->load($limit, NULL, array(), $criteria);
 			}
 
 			return $this->_related[$name];
