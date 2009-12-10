@@ -1133,7 +1133,7 @@ abstract class Mango implements Mango_Interface {
 					$value = Mango::factory($field['model'], $value, Mango::CLEAN);
 				}
 
-				if( ! $value instanceof Mango || (string) $value !== $field['model'] )
+				if( ! $value instanceof Mango)
 				{
 					$value = NULL;
 				}
