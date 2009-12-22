@@ -442,7 +442,11 @@ abstract class Mango implements Mango_Interface {
 				$this->_collection = Inflector::plural($this->_model);
 			}
 
-			$this->_fields['_id'] = array('type'=>'MongoId');
+			if ( ! isset($this->_fields['_id']))
+			{
+				// default _id field
+				$this->_fields['_id'] = array('type'=>'MongoId');
+			}
 
 			// Normalize relations
 			foreach($this->_relations as $name => &$relation)
