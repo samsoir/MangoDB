@@ -180,12 +180,11 @@ class MangoDB {
 		), $a);
 	}
 
-	public function count( $collection_name, array $query = array(), array $fields = array() )
+	public function count( $collection_name, array $query = array() )
 	{
 		return $this->_call('count', array(
 			'collection_name' => $collection_name,
-			'query'           => $query,
-			'fields'          => $fields
+			'query'           => $query
 		));
 	}
 
@@ -343,7 +342,7 @@ class MangoDB {
 				$r = $c->batchInsert($values);
 			break;
 			case 'count':
-				$r = $c->count($query,$fields);
+				$r = $c->count($query);
 			break;
 			case 'find_one':
 				$r = $c->findOne($query,$fields);
