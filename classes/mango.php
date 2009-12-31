@@ -511,7 +511,7 @@ abstract class Mango implements Mango_Interface {
 
 		if(isset($definition['_relations']))
 		{
-			$this->_relations = array_merge($this->_has_one,$definition['_relations']);
+			$this->_relations = array_merge($this->_relations,$definition['_relations']);
 		}
 	}
 
