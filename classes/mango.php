@@ -325,7 +325,7 @@ abstract class Mango implements Mango_Interface {
 					break;
 				}
 
-				$this->_related[$name] = Mango::factory($relation['model'])->load($limit, NULL, array(), $criteria);
+				$this->_related[$name] = Mango::factory($relation['model'])->load($limit, NULL, NULL, array(), $criteria);
 			}
 
 			return $this->_related[$name];
