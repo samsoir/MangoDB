@@ -681,11 +681,12 @@ abstract class Mango implements Mango_Interface {
 	 *
 	 * @param   mixed  limit the (maximum) number of models returned
 	 * @param   array  sorts models on specified fields array( field => 1/-1 )
+	 * @param   int    skip a number of results
 	 * @param   array  specify the fields to return
 	 * @param   array  specify additional criteria
 	 * @return  mixed  if limit = 1, returns $this, otherwise returns iterator
 	 */
-	public function load($limit = 1, array $sort = NULL, array $fields = array(), array $criteria = array())
+	public function load($limit = 1, array $sort = NULL, $skip = NULL, array $fields = array(), array $criteria = array())
 	{
 		if($this->_embedded)
 		{
@@ -706,7 +707,7 @@ abstract class Mango implements Mango_Interface {
 		// resets $this->_changed array
 		$this->clear();
 
-		if ( $limit === 1)
+		if ( $limit === 1 && $sort === NULL && $skip === NULL)
 		{
 			$values = $this->_db->find_one($this->_collection,$criteria,$fields);
 
@@ -718,17 +719,26 @@ abstract class Mango implements Mango_Interface {
 		{
 			$values = $this->_db->find($this->_collection,$criteria,$fields);
 
-			if(is_int($limit))
+			if ( is_int($limit))
 			{
 				$values->limit($limit);
 			}
 
-			if($sort !== NULL)
+			if ( $sort !== NULL)
 			{
 				$values->sort($sort);
 			}
 
-			return new Mango_Iterator($this->_model,$values);
+			if ( is_int($skip))
+			{
+				$values->skip($skip);
+			}
+
+			return $limit === 1
+				? ($values->hasNext()
+						? $this->values( $values->getNext() )
+						: $this)
+				: new Mango_Iterator($this->_model,$values);
 		}
 	}
 
