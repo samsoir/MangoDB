@@ -187,20 +187,6 @@ abstract class Mango implements Mango_Interface {
 	}
 
 	/**
-	 * Unset a field
-	 *
-	 * @return  void
-	 */
-	public function __unset($name)
-	{
-		// no support for $unset yet, now setting to NULL (if value was set)
-		if($this->__isset($name))
-		{
-			$this->__set($name,NULL);
-		}
-	}
-
-	/**
 	 * Empties the model
 	 */
 	public function clear()
@@ -358,11 +344,16 @@ abstract class Mango implements Mango_Interface {
 
 			if ( isset($this->_object[$name]))
 			{
-				// don't update value if the value did not change
+				// Unset field if setting existing field to NULL
+				if ( $value === NULL)
+				{
+					return $this->__unset($name);
+				}
 
+				// don't update value if the value did not change
 				$current = $this->_object[$name];
 
-				if($current === $value)
+				if ($current === $value)
 				{
 					return;
 				}
@@ -392,6 +383,37 @@ abstract class Mango implements Mango_Interface {
 		{
 			$this->__set($name . '_id',$value->_id);
 			$this->_related[$name] = $value;
+		}
+		else
+		{
+			throw new Mango_Exception(':name model does not have a field :field',
+				array(':name' => $this->_model, ':field' => $name));
+		}
+	}
+
+	/**
+	 * Unset a field
+	 *
+	 * @param   string  field name
+	 * @return  void
+	 */
+	public function __unset($name)
+	{
+		if ( ! $this->_init)
+		{
+			$this->init();
+		}
+
+		if ( isset($this->_fields[$name]))
+		{
+			if ( $this->__isset($name))
+			{
+				// unset field
+				unset($this->_object[$name]);
+
+				// mark unset
+				$this->_changed[$name] = FALSE;
+			}
 		}
 		else
 		{
@@ -603,7 +625,7 @@ abstract class Mango implements Mango_Interface {
 			// prepare prefix
 			$path = array_merge($prefix,array($name));
 
-			if (isset($this->_changed[$name]))
+			if ( isset($this->_changed[$name]))
 			{
 				// value has been changed
 				if($value instanceof Mango_Interface)
@@ -611,13 +633,20 @@ abstract class Mango implements Mango_Interface {
 					$value = $value->as_array();
 				}
 
-				if($update)
+				if ( $this->_changed[$name] === TRUE)
 				{
-					$changed = arr::merge($changed,array('$set'=>array( implode('.',$path) => $value) ) );
+					// __set
+					$changed = $update
+						? arr::merge($changed,array('$set'=>array( implode('.',$path) => $value) ) )
+						: arr::merge($changed, arr::path_set($path,$value) );
 				}
 				else
 				{
-					$changed = arr::merge($changed, arr::path_set($path,$value) );
+					// __unset
+					if ( $update)
+					{
+						$changed = arr::merge($changed, array('$unset'=> array( implode('.', $path) => TRUE)));
+					}
 				}
 			}
 			elseif ($this->__isset($name))

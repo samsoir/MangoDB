@@ -7,150 +7,201 @@
 class Mango_Set extends Mango_ArrayObject {
 
 	/*
-	 * Remembers if we are pushing or pulling ($push(All) and $pull(All) cannot happen at the same time)
+	 * MongoDB does not support using different modifiers at the same time on a single set,
+	 * therefore we remember the current mode
 	 */
-	protected $_push;
+	protected $_mode;
 
 	/*
 	 * Set status to saved
 	 */
 	public function saved()
 	{
-		$this->_push = NULL;
+		$this->_mode = NULL;
 
 		parent::saved();
 	}
 
 	/*
 	 * Return array of changes
+	 *
+	 * @param   boolean   Are we updating or creating
+	 * @param   array     Location of set in parent element
+	 * @return  array     Update data
+	 * @throws  Mango_Exception   within a single set, if already $push/$pull, then no other mods are possible
 	 */
 	public function changed($update, array $prefix = array())
 	{
-		if( ! empty($this->_changed) )
+		// fetch changed elements in this set
+		$elements = array();
+
+		switch ( $this->_mode)
 		{
-			if($this->_push)
-			{
-				$changed = array();
-				
-				foreach($this->_changed as $index)
+			case 'push':
+			case 'set':
+				foreach ( $this->_changed as $index)
 				{
-					$changed[] = $this->offsetGet($index);
+					$elements[] = $this->offsetGet($index);
+				}
+			break;
+			case 'pull':
+				// changed values were stored in _changed array
+				$elements = $this->_changed;
+			break;
+		}
+
+		// normalize changed elements 
+		foreach ( $elements as &$element)
+		{
+			if ( $element instanceof Mango_Interface)
+			{
+				$element = $element->as_array();
+			}
+		}
+
+		if ( $update === FALSE)
+		{
+			// no more changes possible after this
+			return arr::path_set($prefix,$elements);
+		}
+
+		// First, get all changes made to the elements of this set directly
+		$changes_local = array();
+
+		switch ( $this->_mode)
+		{
+			case 'set':
+				foreach ( $this->_changed as $index => $set_index)
+				{
+					$changes_local = arr::merge($changes_local, array('$set' => array( implode('.',$prefix) . '.' . $set_index => $elements[$index])));
+				}
+			break;
+			case 'push':
+			case 'pull':
+				$mod = '$' . $this->_mode;
+
+				if ( count($this->_changed) > 1)
+				{
+					$mod .= 'All';
+				}
+				else
+				{
+					$elements = $elements[0];
+				}
+
+				$changes_local = array($mod => array(implode('.',$prefix) => $elements));
+			break;
+		}
+
+		// Second, get all changes made within children elements themselves
+		$changes_children = array();
+
+		// check elements that weren't modified directly for internal changes
+		foreach ( $this as $index => $value)
+		{
+			if ( $this->_mode === 'pull' || $this->_mode === NULL || ! in_array($index, $this->_changed))
+			{
+				if( $value instanceof Mango_Interface)
+				{
+					$changes_children = arr::merge($changes_children, $value->changed($update, array_merge($prefix,array($index))));
 				}
 			}
-			else
-			{
-				$changed = $this->_changed;
-			}
+		}
 
-			foreach($changed as &$value)
+		// If we're pulling/pushing, any other modifier is disallowed (by MongoDB)
+		if ( $this->_mode === 'push' || $this->_mode === 'pull')
+		{
+			if ( ! empty($changes_children))
 			{
-				if($value instanceof Mango_Interface)
-				{
-					$value = $value->as_array();
-				}
+				throw new Mango_Exception('MongoDB does not support any other updates when already in :mode mode', array(
+					':mode' => $this->_mode
+				));
 			}
+		}
 
-			if($update === FALSE)
+		// Return all changes
+		return arr::merge( $changes_local, $changes_children);
+	}
+
+	/*
+	 * Set value at index $index to $value
+	 *
+	 * @param   integer   index
+	 * @param   mixed     value
+	 * @return  void
+	 * @throws  Mango_Exception   invalid key/action
+	 */
+	public function offsetSet($index,$newval)
+	{
+		// sets don't have associative keys
+		if ( ! is_int($index) && ! is_null($index))
+		{
+			throw new Mango_Exception('Mango_Sets only supports numerical keys');
+		}
+
+		$mode = is_int($index) && $this->offsetExists($index)
+			? 'set'
+			: 'push';
+
+		if ( isset($this->_mode))
+		{
+			if ( $this->_mode !== $mode)
 			{
-				return arr::path_set($prefix,$changed);
-			}
-			elseif (count($this->_changed) > 1)
-			{
-				return array( $this->_push ? '$pushAll' : '$pullAll' => array(implode('.',$prefix) => $changed) );
-			}
-			else
-			{
-				return array( $this->_push ? '$push' : '$pull' => array(implode('.',$prefix) => $changed[0]) );
+				throw new Mango_Exception('MongoDB cannot :action when already in :mode mode', array(
+					':action' => $mode,
+					':mode'   => $this->_mode
+				));
 			}
 		}
 		else
 		{
-			$changed = array();
-			
-			// if nothing is pushed or pulled, we support $set
-			foreach($this as $key => $value)
-			{
-				if($value instanceof Mango_Interface)
-				{
-					$changed = arr::merge($changed, $value->changed($update, array_merge($prefix,array($key))));
-				}
-			}
-
-			return $changed;
-		}
-	}
-
-	/*
-	 * Updated offsetSet
-	 *
-	 * Does not accept string keys (only numbers)
-	 * Does not accept setting (pushing) when already pulling
-	 */
-	public function offsetSet($index,$newval)
-	{
-		if($this->_push === FALSE)
-		{
-			// we're already pulling
-			return FALSE;
+			$this->_mode = $mode;
 		}
 
-		// sets don't have associative keys
-		if(! is_int($index) && ! is_null($index))
-		{
-			return FALSE;
-		}
-
-		// Check if value is already added
-		// We only allow unique items to be added
 		if( $this->find($this->load_type($newval)) !== FALSE )
 		{
+			// value has been added to set already
 			return TRUE;
 		}
 
-		// indicate push
-		$this->_push = TRUE;
-
+		// Set value
 		$index = parent::offsetSet($index,$newval);
 
-		if($index !== FALSE)
-		{
-			// new value - remember index (fetch actual value on mango_set::get_changed)
-			$this->_changed[] = $index;
-		}
+		// store index of changed value
+		$this->_changed[] = $index;
 
 		return TRUE;
 	}
 
 	/*
-	 * Updated offsetUnset
+	 * Unset value at index $index
 	 *
-	 * Does not accept string keys (only numbers)
-	 * Does not allow unset (pulling) if already adding (pushing)
+	 * @param   integer   index
+	 * @return  void
+	 * @throws  Mango_Exception   invalid key/action
 	 */
 	public function offsetUnset($index)
 	{
-		if($this->_push === TRUE)
+		if ( ! ctype_digit((string)$index) && ! is_null($index))
 		{
-			// we're already pushing
-			return FALSE;
+			throw new Mango_Exception('Mango_Sets only supports numerical keys');
 		}
 
-		// sets don't have associative keys
-		if(! ctype_digit((string)$index) && ! is_null($index))
+		if ( isset($this->_mode))
 		{
-			return FALSE;
+			if ( $this->_mode !== 'pull')
+			{
+				throw new Mango_Exception('MongoDB cannot pull when already in :mode mode', array(
+					':mode'   => $this->_mode
+				));
+			}
+		}
+		else
+		{
+			$this->_mode = 'pull';
 		}
 
-		// Only one $push/$pull action allowed
-		if( ! empty($this->_changed))
-		{
-			return FALSE;
-		}
-
-		// indicate pull
-		$this->_push = FALSE;
-
-		// when pulling, we store value itself, only way to have access to it
+		// store pulled value
 		$this->_changed[] = $this->offsetGet($index);
 
 		parent::offsetUnset($index);

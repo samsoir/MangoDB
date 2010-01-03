@@ -31,20 +31,31 @@ class Mango_Array extends Mango_ArrayObject {
 				? $this->offsetGet($key) 
 				: NULL;
 
-			if(isset($this->_changed[$key]))
+			if ( isset($this->_changed[$key]))
 			{
-				// value has been changed (set/unset)
-				// todo add $unset when available (now unset vars are set to NULL
-
-				$value = $value instanceof Mango_Interface
-					? $value->as_array()
-					: $value;
+				// value has been changed
+				if($value instanceof Mango_Interface)
+				{
+					$value = $value->as_array();
+				}
 
 				$path = array_merge($prefix,array($key));
 
-				$changed = $update
-					? arr::merge($changed, array( '$set' => array( implode('.',$path) => $value) ) )
-					: arr::merge($changed, arr::path_set($path,$value) );
+				if ( $this->_changed[$key] === TRUE)
+				{
+					// __set
+					$changed = $update
+						? arr::merge($changed, array( '$set' => array( implode('.',$path) => $value)))
+						: arr::merge($changed, arr::path_set($path,$value) );
+				}
+				else
+				{
+					// __unset
+					if ( $update)
+					{
+						$changed = arr::merge($changed, array( '$unset' => array( implode('.',$path) => TRUE)));
+					}
+				}
 			}
 			elseif ($value instanceof Mango_Interface)
 			{
@@ -57,24 +68,34 @@ class Mango_Array extends Mango_ArrayObject {
 
 	/*
 	 * Set a key to value
+	 *
+	 * @param   string   key
+	 * @param   mixed    value
+	 * @return  void
 	 */
-	public function offsetSet($index,$newval)
+	public function offsetSet($key, $newval)
 	{
-		if(($index = parent::offsetSet($index,$newval)) !== FALSE)
+		if(($key = parent::offsetSet($key,$newval)) !== FALSE)
 		{
 			// new value - remember change
-			$this->_changed[$index] = TRUE;
+			$this->_changed[$key] = TRUE;
 		}
 	}
 
 	/*
 	 * Unset a key
+	 *
+	 * @param   string   key
+	 * @return  void
 	 */
-	public function offsetUnset($index)
+	public function offsetUnset($key)
 	{
-		parent::offsetUnset($index);
+		if ( $this->offsetExists($key))
+		{
+			parent::offsetUnset($key);
 
-		$this->_changed[$index] = FALSE;
+			$this->_changed[$key] = FALSE;
+		}
 	}
 
 	/*
