@@ -23,19 +23,19 @@ abstract class Mango implements Mango_Interface {
 	{
 		static $models;
 
-		if ($values)
+		if ( $values)
 		{
-			if(self::$_cti === NULL)
+			if ( self::$_cti === NULL)
 			{
 				// load extension config
 				self::$_cti = Kohana::config('mangoCTI');
 			}
 
-			while (isset(self::$_cti[$name]))
+			while ( isset(self::$_cti[$name]))
 			{
 				$key = key(self::$_cti[$name]);
 
-				if (isset($values[$key]) && isset(self::$_cti[$name][$key][$values[$key]]))
+				if ( isset($values[$key]) && isset(self::$_cti[$name][$key][$values[$key]]))
 				{
 					// extend
 					$name = self::$_cti[$name][$key][$values[$key]];
@@ -57,9 +57,9 @@ abstract class Mango implements Mango_Interface {
 		// Create a new instance of the model by clone
 		$model = clone $models[$name];
 
-		if($values)
+		if ( $values)
 		{
-			switch($load_type)
+			switch ( $load_type)
 			{
 				case Mango::CHANGE:
 					$model->values($values);
@@ -252,7 +252,7 @@ abstract class Mango implements Mango_Interface {
 				? $this->_object[$name]
 				: NULL;
 
-			switch($field['type'])
+			switch ( $field['type'])
 			{
 				case 'enum':
 					$value = isset($value) && isset($field['values'][$value]) 
@@ -263,14 +263,14 @@ abstract class Mango implements Mango_Interface {
 				case 'array':
 				case 'has_one':
 				case 'has_many':
-					if($value === NULL)
+					if ( $value === NULL)
 					{
 						// 'secretly' create value - access _object directly, not recorded as change
 						$value = $this->_object[$name] = $this->load_field($name,array());
 					}
 				break;
 				case 'counter':
-					if($value === NULL)
+					if ( $value === NULL)
 					{
 						// 'secretly' create counter - access _object directly, not recorded as change
 						$value = $this->_object[$name] = $this->load_field($name,0);
@@ -291,7 +291,7 @@ abstract class Mango implements Mango_Interface {
 			{
 				$relation = $this->_relations[$name];
 
-				switch($relation['type'])
+				switch ( $relation['type'])
 				{
 					case 'has_one':
 						$criteria = array($this->_model . '_id' => $this->_id);
@@ -421,7 +421,7 @@ abstract class Mango implements Mango_Interface {
 	 */
 	protected function init()
 	{
-		if ($this->_init)
+		if ( $this->_init)
 		{
 			// Can only be called once
 			return;
@@ -463,7 +463,7 @@ abstract class Mango implements Mango_Interface {
 			}
 
 			// Normalize relations
-			foreach($this->_relations as $name => &$relation)
+			foreach ( $this->_relations as $name => &$relation)
 			{
 				if ( $relation['type'] === 'has_and_belongs_to_many')
 				{
@@ -481,7 +481,7 @@ abstract class Mango implements Mango_Interface {
 					}
 				}
 
-				switch($relation['type'])
+				switch ( $relation['type'])
 				{
 					case 'belongs_to':
 						$this->_fields[$name . '_id'] = array('type'=>'MongoId');
@@ -493,7 +493,7 @@ abstract class Mango implements Mango_Interface {
 			}
 
 			// Initialize DB
-			if(! is_object($this->_db) )
+			if ( ! is_object($this->_db) )
 			{
 				$this->_db = MangoDB::instance($this->_db);
 			}
@@ -518,12 +518,12 @@ abstract class Mango implements Mango_Interface {
 	 */
 	protected function _set_model_definition(array $definition)
 	{
-		if(isset($definition['_fields']))
+		if ( isset($definition['_fields']))
 		{
 			$this->_fields = array_merge($this->_fields,$definition['_fields']);
 		}
 
-		if(isset($definition['_relations']))
+		if ( isset($definition['_relations']))
 		{
 			$this->_relations = array_merge($this->_relations,$definition['_relations']);
 		}
@@ -546,7 +546,7 @@ abstract class Mango implements Mango_Interface {
 		{
 			//echo 'values as: ' .  ($clean ? 'TRUE' : 'FALSE') . ' in: ' . $field . ' to ' . (is_object($value) ? get_class($value) : $value) . ' in ' . $this->_model .'<br>';
 
-			if ($clean === TRUE)
+			if ( $clean === TRUE)
 			{
 				// Set the field directly
 				$this->_object[$field] = $this->load_field($field,$value);
@@ -571,7 +571,7 @@ abstract class Mango implements Mango_Interface {
 	{
 		$array = array();
 
-		foreach($this->_object as $name => $value)
+		foreach ( $this->_object as $name => $value)
 		{
 			$array[$name] = $value instanceof Mango_Interface 
 				? $value->as_array( $clean ) 
@@ -602,7 +602,7 @@ abstract class Mango implements Mango_Interface {
 	{
 		$changed = array();
 
-		foreach($this->_fields as $name => $field)
+		foreach ( $this->_fields as $name => $field)
 		{
 			if (isset($field['local']) && $field['local'] === TRUE)
 			{
@@ -620,7 +620,7 @@ abstract class Mango implements Mango_Interface {
 			if ( isset($this->_changed[$name]))
 			{
 				// value has been changed
-				if($value instanceof Mango_Interface)
+				if ( $value instanceof Mango_Interface)
 				{
 					$value = $value->as_array();
 				}
@@ -641,10 +641,10 @@ abstract class Mango implements Mango_Interface {
 					}
 				}
 			}
-			elseif ($this->__isset($name))
+			elseif ( $this->__isset($name))
 			{
 				// check any (embedded) objects/arrays/sets
-				if($value instanceof Mango_Interface)
+				if ( $value instanceof Mango_Interface)
 				{
 					$changed = arr::merge($changed, $value->changed($update,$path));
 				}
@@ -661,9 +661,9 @@ abstract class Mango implements Mango_Interface {
 	 */
 	public function saved()
 	{
-		foreach($this->_object as $value)
+		foreach ( $this->_object as $value)
 		{
-			if($value instanceof Mango_Interface)
+			if ( $value instanceof Mango_Interface)
 			{
 				$value->saved();
 			}
@@ -709,7 +709,7 @@ abstract class Mango implements Mango_Interface {
 	 */
 	public function load($limit = 1, array $sort = NULL, $skip = NULL, array $fields = array(), array $criteria = array())
 	{
-		if($this->_embedded)
+		if ( $this->_embedded)
 		{
 			throw new Mango_Exception(':name model is embedded and cannot be loaded from database',
 				array(':name' => $this->_model));
@@ -770,7 +770,7 @@ abstract class Mango implements Mango_Interface {
 	 */
 	public function create()
 	{
-		if($this->_embedded)
+		if ( $this->_embedded)
 		{
 			throw new Mango_Exception(':name model is embedded and cannot be created in the database',
 				array(':name' => $this->_model));
@@ -793,7 +793,7 @@ abstract class Mango implements Mango_Interface {
 			}
 			while( $err['err'] && ! $user_defined_id && $try < 5 );
 
-			if($err['err'])
+			if ( $err['err'])
 			{
 				// Something went wrong - throw error
 				throw new Mango_Exception('Unable to create :model, database returned error :error',
@@ -820,7 +820,7 @@ abstract class Mango implements Mango_Interface {
 	 */
 	public function update( $criteria = array() )
 	{
-		if($this->_embedded)
+		if ( $this->_embedded)
 		{
 			throw new Mango_Exception(':name model is embedded and cannot be updated itself (update parent instead)',
 				array(':name' => $this->_model));
@@ -854,7 +854,7 @@ abstract class Mango implements Mango_Interface {
 		{
 			$this->load(1);
 
-			if( ! $this->loaded())
+			if ( ! $this->loaded())
 			{
 				// model does not exist
 				return $this;
@@ -862,15 +862,15 @@ abstract class Mango implements Mango_Interface {
 		}
 
 		// Update/remove relations
-		foreach($this->_relations as $name => $relation)
+		foreach ( $this->_relations as $name => $relation)
 		{
-			switch($relation['type'])
+			switch ( $relation['type'])
 			{
 				case 'has_one':
 					$this->__get($name)->delete();
 				break;
 				case 'has_many':
-					foreach($this->__get($name) as $hm)
+					foreach ( $this->__get($name) as $hm)
 					{
 						$hm->delete();
 					}
@@ -878,7 +878,7 @@ abstract class Mango implements Mango_Interface {
 				case 'has_and_belongs_to_many':
 					$set = $this->__get($name . '_ids')->as_array();
 
-					if( $set)
+					if ( $set)
 					{
 						$this->_db->execute('function () {'.
 						'  db.' . $name . '.find({_id: { $in:[ObjectId(\''. implode('\',\'',$set ) . '\')]}}).forEach( function(obj) {'.
@@ -905,11 +905,11 @@ abstract class Mango implements Mango_Interface {
 	 */
 	public function check(array $data = NULL, $supplied_fields_only = FALSE)
 	{
-		if($data === NULL)
+		if ( $data === NULL)
 		{
 			$values = $this->as_array( FALSE );
 		}
-		elseif ($supplied_fields_only === TRUE)
+		elseif ( $supplied_fields_only === TRUE)
 		{
 			/**
 			 * We always have to validate a complete object
@@ -983,7 +983,7 @@ abstract class Mango implements Mango_Interface {
 			}
 			else
 			{
-				foreach($value as $k => & $v)
+				foreach ( $value as $k => & $v)
 				{
 					if ( ! is_array($v))
 					{
@@ -1031,7 +1031,7 @@ abstract class Mango implements Mango_Interface {
 		foreach ($this->_fields as $name => $field)
 		{
 			// field type rules
-			switch($field['type'])
+			switch ( $field['type'])
 			{
 				case 'enum':
 					$data->rule($name,'in_array',array($field['values']));
@@ -1061,15 +1061,15 @@ abstract class Mango implements Mango_Interface {
 			}
 
 			// field is required
-			if(isset($field['required']) AND $field['required'] === TRUE)
+			if ( isset($field['required']) AND $field['required'] === TRUE)
 			{
 				$data->rule($name,'not_empty');
 			}
 
 			// min/max length/value
-			foreach( array('min_value','max_value','min_length','max_length') as $rule)
+			foreach ( array('min_value','max_value','min_length','max_length') as $rule)
 			{
-				if(isset($field[$rule]))
+				if ( isset($field[$rule]))
 				{
 					$data->rule($name,$rule,array($field[$rule]));
 				}
@@ -1102,7 +1102,7 @@ abstract class Mango implements Mango_Interface {
 		foreach ($this->_relations as $name => &$relation)
 		{
 			// belongs to ID field
-			if($relation['type'] === 'belongs_to')
+			if ( $relation['type'] === 'belongs_to')
 			{
 				$data->rule($name . '_id','not_empty');
 			}
@@ -1123,16 +1123,16 @@ abstract class Mango implements Mango_Interface {
 		// Load field data
 		$field = $this->_fields[$name];
 
-		switch($field['type'])
+		switch ( $field['type'])
 		{
 			case 'MongoId':
-				if( $value !== NULL AND ! $value instanceof MongoId)
+				if ( $value !== NULL AND ! $value instanceof MongoId)
 				{
 					$value = new MongoId($value);
 				}
 			break;
 			case 'enum':
-				if(is_numeric($value) && (int) $value == $value)
+				if ( is_numeric($value) && (int) $value == $value)
 				{
 					$value = isset($field['values'][$value]) ? $value : NULL;
 				}
@@ -1163,12 +1163,12 @@ abstract class Mango implements Mango_Interface {
 				$value = trim((string) $value);
 			break;
 			case 'has_one':
-				if(is_array($value))
+				if ( is_array($value))
 				{
 					$value = Mango::factory($field['model'], $value, Mango::CLEAN);
 				}
 
-				if( ! $value instanceof Mango)
+				if ( ! $value instanceof Mango)
 				{
 					$value = NULL;
 				}
@@ -1193,28 +1193,28 @@ abstract class Mango implements Mango_Interface {
 			break;
 		}
 
-		if($value !== NULL)
+		if ( $value !== NULL)
 		{
-			switch($field['type'])
+			switch ( $field['type'])
 			{
 				case 'int':
 				case 'float':
-					if(isset($field['min_value']) AND $value < $field['min_value'])
+					if ( isset($field['min_value']) AND $value < $field['min_value'])
 					{
 						$value = NULL;
 					}
-					if(isset($field['max_value']) AND $value > $field['max_value'])
+					if ( isset($field['max_value']) AND $value > $field['max_value'])
 					{
 						$value = NULL;
 					}
 				break;
 				case 'email':
 				case 'string':
-					if(isset($field['min_length']) AND UTF8::strlen($value) < $field['min_length'])
+					if ( isset($field['min_length']) AND UTF8::strlen($value) < $field['min_length'])
 					{
 						$value = NULL;
 					}
-					if(isset($field['max_length']) AND UTF8::strlen($value) > $field['max_length'])
+					if ( isset($field['max_length']) AND UTF8::strlen($value) > $field['max_length'])
 					{
 						$value = NULL;
 					}
@@ -1235,7 +1235,7 @@ abstract class Mango implements Mango_Interface {
 	 */
 	public function has(Mango $model, $name = NULL)
 	{
-		if($name === NULL)
+		if ( $name === NULL)
 		{
 			$name = (string) $model;
 		}
@@ -1248,7 +1248,7 @@ abstract class Mango implements Mango_Interface {
 			$field = $name_plural . '_ids';
 			$value = $model->_id;
 		}
-		elseif (isset($this->_fields[$name_plural]) && $this->_fields[$name_plural]['type'] === 'has_many' )
+		elseif ( isset($this->_fields[$name_plural]) && $this->_fields[$name_plural]['type'] === 'has_many' )
 		{
 			// embedded Has Many
 			$field = $name_plural;
@@ -1275,12 +1275,12 @@ abstract class Mango implements Mango_Interface {
 	 */
 	public function add(Mango $model, $name = NULL, $returned = FALSE)
 	{
-		if($name === NULL)
+		if ( $name === NULL)
 		{
 			$name = (string) $model;
 		}
 
-		if($this->has($model,$name))
+		if ( $this->has($model,$name))
 		{
 			// already added
 			return TRUE;
@@ -1291,7 +1291,7 @@ abstract class Mango implements Mango_Interface {
 		if ( isset($this->_relations[$name_plural]) && $this->_relations[$name_plural]['type'] === 'has_and_belongs_to_many')
 		{
 			// related HABTM
-			if( ! $model->loaded() || ! $this->loaded() )
+			if ( ! $model->loaded() || ! $this->loaded() )
 			{
 				return FALSE;
 			}
@@ -1299,16 +1299,16 @@ abstract class Mango implements Mango_Interface {
 			$field = $name_plural . '_ids';
 
 			// try to push
-			if($this->__get($field)->push($model->_id))
+			if ( $this->__get($field)->push($model->_id))
 			{
 				// push succeed
-				if( isset($this->_related[$name_plural]) )
+				if ( isset($this->_related[$name_plural]) )
 				{
 					// Related models have been loaded already, add this one
 					$this->_related[$name_plural][] = $model;
 				}
 
-				if( ! $returned )
+				if ( ! $returned )
 				{
 					// add relation to model as well
 					$model->add($this,$this->_model,TRUE);
@@ -1341,12 +1341,12 @@ abstract class Mango implements Mango_Interface {
 	 */
 	public function remove(Mango $model, $name = NULL,$returned = FALSE)
 	{
-		if($name === NULL)
+		if ( $name === NULL)
 		{
 			$name = (string) $model;
 		}
 
-		if(! $this->has($model,$name))
+		if ( ! $this->has($model,$name))
 		{
 			// already removed
 			return TRUE;
@@ -1357,7 +1357,7 @@ abstract class Mango implements Mango_Interface {
 		if ( isset($this->_relations[$name_plural]) && $this->_relations[$name_plural]['type'] === 'has_and_belongs_to_many')
 		{
 			// related HABTM
-			if( ! $model->loaded() || ! $this->loaded() )
+			if ( ! $model->loaded() || ! $this->loaded())
 			{
 				return FALSE;
 			}
@@ -1365,16 +1365,16 @@ abstract class Mango implements Mango_Interface {
 			$field = $name_plural . '_ids';
 
 			// try to pull
-			if($this->__get($field)->pull($model->_id))
+			if ( $this->__get($field)->pull($model->_id))
 			{
 				// pull succeed
-				if( isset($this->_related[$name_plural]) )
+				if ( isset($this->_related[$name_plural]) )
 				{
 					// Related models have been loaded already, remove this one
 					$related = array();
-					foreach($this->_related[$name_plural] as $key => $object)
+					foreach ( $this->_related[$name_plural] as $key => $object)
 					{
-						if($object->_id === $model->_id)
+						if ( $object->_id === $model->_id)
 						{
 							unset($this->_related[$name_plural]);
 							break;
@@ -1382,7 +1382,7 @@ abstract class Mango implements Mango_Interface {
 					}
 				}
 
-				if( ! $returned )
+				if ( ! $returned )
 				{
 					// add relation to model as well
 					$model->remove($this,$this->_model,TRUE);
@@ -1413,7 +1413,7 @@ abstract class Mango implements Mango_Interface {
 	 */
 	public function _is_unique(Validate $array, $field)
 	{
-		if ($this->loaded() AND $this->_object[$field] === $array[$field])
+		if ( $this->loaded() AND $this->_object[$field] === $array[$field])
 		{
 			// This value is unchanged
 			return TRUE;
@@ -1421,7 +1421,7 @@ abstract class Mango implements Mango_Interface {
 
 		$found = $this->_db->find_one( $this->_collection, array($field => $array[$field]), array('_id'=>TRUE));
 
-		if($found !== NULL)
+		if ( $found !== NULL)
 		{
 			$array->error($field,'is_unique');
 		}

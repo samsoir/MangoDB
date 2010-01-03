@@ -38,9 +38,16 @@ class Mango_Iterator implements Iterator, Countable {
 		return $array;
 	}
 
-	// Return an (associative) array of values
-	// $blog->comments->select_list('id','author');
-	// $blog->comments->select_list('author');
+	/*
+	 * Create an (associative) array of values from this iterator
+	 *
+	 * $blog->comments->select_list('id','author');
+	 * $blog->comments->select_list('author');
+	 *
+	 * @param   string   key1
+	 * @param   string   key2 (optional)
+	 * @return  array    key1 => key2 or key1,key1,key1
+	 */
 	public function select_list($key = '_id',$val = NULL)
 	{
 		if($val === NULL)
