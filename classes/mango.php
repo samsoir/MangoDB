@@ -878,13 +878,9 @@ abstract class Mango implements Mango_Interface {
 				case 'has_and_belongs_to_many':
 					$set = $this->__get($name . '_ids')->as_array();
 
-					if ( $set)
+					if ( ! empty($set))
 					{
-						$this->_db->execute('function () {'.
-						'  db.' . $name . '.find({_id: { $in:[ObjectId(\''. implode('\',\'',$set ) . '\')]}}).forEach( function(obj) {'.
-						'    db.' . $name . '.update({_id:obj._id},{ $pull : { ' . Inflector::plural($this->_model) . '_ids' . ': ObjectId(\'' .  $this->_id . '\')}});'.
-						'  });'.
-						'}');
+						$this->_db->update( $name, array('_id' => array('$in' => $set)), array('$pull' => array(Inflector::plural($this->_model) . '_ids' => $this->_id)), array('multiple' => TRUE));
 					}
 				break;
 			}
