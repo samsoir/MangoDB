@@ -353,17 +353,9 @@ abstract class Mango implements Mango_Interface {
 				// don't update value if the value did not change
 				$current = $this->_object[$name];
 
-				if ($current === $value)
+				if ( Mango::normalize($current) === Mango::normalize($value))
 				{
-					return;
-				}
-				elseif ($value instanceof Mango_Interface && $current instanceof Mango_Interface && $value->as_array() === $current->as_array())
-				{
-					return;
-				}
-				elseif ($value instanceof MongoId && $current instanceof MongoId && (string) $value === (string) $current)
-				{
-					return;
+					return FALSE;
 				}
 			}
 			elseif ( $value === NULL || $value === '')
@@ -1453,5 +1445,29 @@ abstract class Mango implements Mango_Interface {
 	public static function _is_mixed($value)
 	{
 		return ! is_object($value);
+	}
+
+	/**
+	 * Normalize value to default format so values can be compared
+	 *
+	 * (comparing two identical objects in PHP will return FALSE)
+	 *
+	 * @param   mixed   value to normalize
+	 * @return  mixed   normalized value
+	 */
+	public static function normalize($value)
+	{
+		if ( $value instanceof Mango_Interface)
+		{
+			return $value->as_array( FALSE );
+		}
+		elseif ( $value instanceof MongoId)
+		{
+			return (string) $value;
+		}
+		else
+		{
+			return $value;
+		}
 	}
 }

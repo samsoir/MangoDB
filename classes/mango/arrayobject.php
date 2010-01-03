@@ -210,15 +210,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			$current = $this->offsetGet($index);
 
 			// only update if new data
-			if($current === $newval)
-			{
-				return FALSE;
-			}
-			elseif ($newval instanceof Mango_Interface && $current instanceof Mango_Interface && $newval->as_array() === $current->as_array())
-			{
-				return FALSE;
-			}
-			elseif ($newval instanceof MongoId && $current instanceof MongoId && (string) $newval === (string) $current)
+			if ( Mango::normalize($current) === Mango::normalize($newval))
 			{
 				return FALSE;
 			}
