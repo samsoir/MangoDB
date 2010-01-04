@@ -573,12 +573,27 @@ abstract class Mango implements Mango_Interface {
 
 		foreach ( $this->_object as $name => $value)
 		{
-			$array[$name] = $value instanceof Mango_Interface 
-				? $value->as_array( $clean ) 
-				: ($clean ? $value : $this->__get($name));
+			if ( $value instanceof Mango_Interface)
+			{
+				$array[$name] = $value->as_array( $clean );
+			}
+			elseif ( $clean)
+			{
+				// direct from _object, for saving (enums numbers)
+				$array[$name] = $value;
+			}
+			else
+			{
+				// user friendlier value, for displaying (string _IDs, enum values)
+				$array[$name] = $value instanceof MongoId
+					? (string) $value
+					: $this->__get($name);
+			}
 		}
 
-		return count($array) || !$clean ? $array : (object) array();
+		return count($array) || ! $clean
+			? $array
+			: (object) array();
 	}
 
 	/**

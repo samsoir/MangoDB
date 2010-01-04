@@ -29,9 +29,9 @@ class Mango_Iterator implements Iterator, Countable {
 
 			foreach ( $this as $document)
 			{
-				$array[ (string) $document->_id ] = $objects 
+				$array[] = $objects 
 					? $document
-					: $document->as_array();
+					: $document->as_array( FALSE );
 			}
 		}
 
