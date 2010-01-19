@@ -143,22 +143,15 @@ class Mango_Set extends Mango_ArrayObject {
 			? 'set'
 			: 'push';
 
-		if ( isset($this->_mode))
+		if ( isset($this->_mode) && $this->_mode !== $mode)
 		{
-			if ( $this->_mode !== $mode)
-			{
-				throw new Mango_Exception('MongoDB cannot :action when already in :mode mode', array(
-					':action' => $mode,
-					':mode'   => $this->_mode
-				));
-			}
-		}
-		else
-		{
-			$this->_mode = $mode;
+			throw new Mango_Exception('MongoDB cannot :action when already in :mode mode', array(
+				':action' => $mode,
+				':mode'   => $this->_mode
+			));
 		}
 
-		if( $this->find($this->load_type($newval)) !== FALSE )
+		if ( $this->find($this->load_type($newval)) !== FALSE)
 		{
 			// value has been added to set already
 			return TRUE;
@@ -167,7 +160,8 @@ class Mango_Set extends Mango_ArrayObject {
 		// Set value
 		$index = parent::offsetSet($index,$newval);
 
-		// store index of changed value
+		// set mode & index of changed value
+		$this->_mode = $mode;
 		$this->_changed[] = $index;
 
 		return TRUE;
@@ -187,21 +181,15 @@ class Mango_Set extends Mango_ArrayObject {
 			throw new Mango_Exception('Mango_Sets only supports numerical keys');
 		}
 
-		if ( isset($this->_mode))
+		if ( isset($this->_mode) && $this->_mode !== 'pull')
 		{
-			if ( $this->_mode !== 'pull')
-			{
-				throw new Mango_Exception('MongoDB cannot pull when already in :mode mode', array(
-					':mode'   => $this->_mode
-				));
-			}
-		}
-		else
-		{
-			$this->_mode = 'pull';
+			throw new Mango_Exception('MongoDB cannot pull when already in :mode mode', array(
+				':mode'   => $this->_mode
+			));
 		}
 
-		// store pulled value
+		// set mode & pulled value
+		$this->_mode = 'pull';
 		$this->_changed[] = $this->offsetGet($index);
 
 		parent::offsetUnset($index);
