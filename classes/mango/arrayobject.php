@@ -285,17 +285,18 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	}
 
 	/*
-	 * Recursively find a dot notated key string
+	 * Recursively find a delimiter notated key string
 	 *
-	 * @param  string|array  dot notated keystring or exploded array
-	 * @param  mixed         default value to return if key not found
-	 * @return  mixed        value (if found) or default value
+	 * @param   string|array  delimiter notated keystring or exploded array
+	 * @param   mixed         default value to return if key not found
+	 * @param   string        delimiter (defaults to dot '.')
+	 * @return  mixed         value (if found) or default value
 	 */
-	public function locate($key, $default = NULL)
+	public function locate($key, $default = NULL, $delimiter = '.')
 	{
 		if ( ! is_array($key))
 		{
-			$key = explode('.',(string) $key);
+			$key = explode($delimiter,(string) $key);
 		}
 
 		// fetch next key
