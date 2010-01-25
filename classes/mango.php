@@ -772,7 +772,7 @@ abstract class Mango implements Mango_Interface {
 
 			return $limit === 1
 				? ($values->hasNext()
-						? $this->values( $values->getNext() )
+						? $this->values( $values->getNext(), TRUE)
 						: $this)
 				: new Mango_Iterator($this->_model,$values);
 		}
