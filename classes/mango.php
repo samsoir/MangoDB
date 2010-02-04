@@ -1186,7 +1186,6 @@ abstract class Mango implements Mango_Interface {
 			break;
 			case 'has_many':
 				$value = new Mango_Set($value, $field['model']);
-				// TODO - switch to array when $unset is available
 			break;
 			case 'counter':
 				$value = new Mango_Counter($value);
