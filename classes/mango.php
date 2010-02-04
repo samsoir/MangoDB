@@ -139,7 +139,7 @@ abstract class Mango implements Mango_Interface {
 	 *
 	 * @return  string
 	 */
-	final public function __toString()
+	public function __toString()
 	{
 		return $this->_model;
 	}
