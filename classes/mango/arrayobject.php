@@ -66,16 +66,6 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	}
 
 	/*
-	 * Autodetects type (set or array)
-	 */
-	public function type_hint(array $value)
-	{
-		return array_keys($value) === range(0, count($value) - 1)
-			? 'set'
-			: 'array';
-	}
-
-	/*
 	 * Loads a value into correct type
 	 */
 	public function load_type($value)
@@ -86,18 +76,9 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 				// do nothing
 			break;
 			case 'counter':
-				if ( is_array($value))
-				{
-					// multidimensional counter
-					$value = $this->type_hint($value) === 'set'
-						? new Mango_Set($value,$this->_type_hint)
-						: new Mango_Array($value,$this->_type_hint);
-				}
-				else
-				{
-					// simple counter
-					$value = new Mango_Counter($value,$this->_type_hint);
-				}
+				$value = is_array($value)
+					? new Mango_Array($value, $this->_type_hint) // multidimensional array of counters
+					: new Mango_Counter($value);
 			break;
 			case 'set':
 				if ( is_array($value))
@@ -178,14 +159,14 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			{
 				case 'array':
 				case 'set':
+				case 'counter': 
+					// counter also defaults to array, to support multidimensional counters
+					// (Mango_Array can act as a counter itself aswell, so leaving all options available)
 					$value = array();
-				break;
-				case 'counter':
-					$value = 0;
 				break;
 				case NULL:
 					// implicit set is only possible when we know the array type.
-					throw new Kohana_Exception('Set typehint to \'set\', \'array\', \'counter\' or model name (now: :typehint) to support implicit array creation', 
+					throw new Mango_Exception('Set typehint to \'set\', \'array\', \'counter\' or model name (now: :typehint) to support implicit array creation', 
 						array(':typehint' => $this->_type_hint ? '\''.$this->_type_hint.'\'' : 'not set'));
 				break;
 				default:

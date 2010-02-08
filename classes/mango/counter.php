@@ -15,7 +15,7 @@ class Mango_Counter implements Mango_Interface {
 	/**
 	 * Constructor
 	 */
-	public function __construct($value = NULL, $new = FALSE)
+	public function __construct($value = NULL)
 	{
 		if ( $value instanceof Mango_Counter)
 		{

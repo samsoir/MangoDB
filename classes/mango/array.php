@@ -2,15 +2,29 @@
 
 /*
  * Mango implementation of a Mongo Javascript Object.
+ *
+ * Can also act as counter in a multidimensional array of counters
+ * (see MangoDemo - demo8)
  */
 
 class Mango_Array extends Mango_ArrayObject {
+
+	/**
+	 * @var   Mango_Counter object in case array is acting as counter
+	 */
+	protected $_counter;
 
 	/*
 	 * Return array of changes
 	 */
 	public function changed($update, array $prefix = array())
 	{
+		if ( isset($this->_counter))
+		{
+			// acting as counter
+			return $this->_counter->changed($update, $prefix);
+		}
+
 		$changed = array();
 
 		// Get a list of all relevant keys (current + unset keys)
@@ -66,6 +80,16 @@ class Mango_Array extends Mango_ArrayObject {
 		return $changed;
 	}
 
+	public function offsetGet($key)
+	{
+		if ( isset($this->_counter))
+		{
+			throw new Mango_Exception('This Mango_Array is acting as a counter');
+		}
+
+		return parent::offsetGet($key);
+	}
+
 	/*
 	 * Set a key to value
 	 *
@@ -75,7 +99,12 @@ class Mango_Array extends Mango_ArrayObject {
 	 */
 	public function offsetSet($key, $newval)
 	{
-		if(($key = parent::offsetSet($key,$newval)) !== FALSE)
+		if ( isset($this->_counter))
+		{
+			throw new Mango_Exception('This Mango_Array is acting as a counter');
+		}
+
+		if ( ($key = parent::offsetSet($key,$newval)) !== FALSE)
 		{
 			// new value - remember change
 			$this->_changed[$key] = TRUE;
@@ -90,6 +119,11 @@ class Mango_Array extends Mango_ArrayObject {
 	 */
 	public function offsetUnset($key)
 	{
+		if ( isset($this->_counter))
+		{
+			throw new Mango_Exception('This Mango_Array is acting as a counter');
+		}
+
 		if ( $this->offsetExists($key))
 		{
 			parent::offsetUnset($key);
@@ -105,10 +139,58 @@ class Mango_Array extends Mango_ArrayObject {
 	 */
 	public function as_array( $clean = TRUE )
 	{
+		if ( isset($this->_counter))
+		{
+			return $this->_counter->as_array($clean);
+		}
+
 		$array = parent::as_array( $clean );
 
 		return $clean && ! count($array) 
 			? (object) array() 
 			: $array;
+	}
+
+	/**
+	 * Have Mango_Array act as counter - increment
+	 *
+	 * @param  int   value to increment counter by
+	 * @return void
+	 */
+	public function increment($value = 1)
+	{
+		$this->act_as_counter($value);
+	}
+
+	/**
+	 * Have Mango_Array act as counter - decrement
+	 *
+	 * @param  int   value to decrement counter by
+	 * @return void
+	 */
+	public function decrement($value = 1)
+	{
+		$this->act_as_counter( -1 * $value);
+	}
+
+	/**
+	 * Act as counter method, available to support multi dimensional arrays with counters
+	 * structure of (multi dimensional) array doesn't have to be set beforehand.
+	 */
+	protected function act_as_counter($value)
+	{
+		// verify if array can act as counter
+		if ( $this->_type_hint !== 'counter' || count($this) > 0 || $this->_changed !== array())
+		{
+			throw new Mango_Exception('This Mango_Array cannot act as counter');
+		}
+
+		if ( ! isset($this->_counter))
+		{
+			// create counter
+			$this->_counter = new Mango_Counter;
+		}
+
+		$this->_counter->increment($value);
 	}
 }
