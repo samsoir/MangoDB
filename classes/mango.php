@@ -793,20 +793,11 @@ abstract class Mango implements Mango_Interface {
 
 		if ( $values = $this->changed(FALSE))
 		{
-			$user_defined_id = isset($values['_id']);
+			// insert - MongoDB driver will generate unique _id value (if missing)
+			$this->_db->insert($this->_collection, $values);
 
-			do
-			{
-				// insert
-				$this->_db->insert($this->_collection, $values);
-
-				// check for success
-				$err = $this->_db->last_error();
-
-				// prevent endless loop
-				$try = isset($try) ? $try + 1 : 1; 
-			}
-			while( $err['err'] && ! $user_defined_id && $try < 5 );
+			// check for success
+			$err = $this->_db->last_error();
 
 			if ( $err['err'])
 			{
@@ -817,7 +808,7 @@ abstract class Mango implements Mango_Interface {
 
 			if ( ! isset($this->_object['id']))
 			{
-				// Store (assigned) MongoID in object
+				// Store (generated) MongoID in object
 				$this->_object['_id'] = $this->load_field('_id',$values['_id']);
 			}
 
