@@ -11,6 +11,10 @@ abstract class Mango implements Mango_Interface {
 	const EXTEND   = 1; // Returns empty model - only uses values to detect possible extension
 	const CLEAN    = 2; // Pushes values into model - doesn't trigger changes
 
+	const CHECK_FULL  = 0; // Full validation - local and embedded documents
+	const CHECK_LOCAL = 1; // Full validation of local data only (not the embedded documents)
+	const CHECK_ONLY  = 2; // Selective validation of supplied local fields only
+
 	/**
 	 * Load an Mango model.
 	 *
@@ -901,38 +905,22 @@ abstract class Mango implements Mango_Interface {
 	 * Check the given data is valid. Recursively checks embedded objects as well
 	 *
 	 * @throws  Validate_Exception  when an error is found
-	 * @param   array    data to check, field => value
-	 * @param   boolean  only validate the fields supplied in $data
-	 * @return  array    filtered data
+	 * @param   array    data to check, defaults to current document data (including embedded documents)
+	 * @param   subject  specify what part of $data should be subjected to validation, Mango::CHECK_FULL, Mango::CHECK_LOCAL, Mango::CHECK_ONLY
+	 * @return  array    validated $data
 	 */
-	public function check(array $data = NULL, $supplied_fields_only = FALSE)
+	public function check(array $data = NULL, $subject = 0)
 	{
-		if ( $data === NULL)
+		if ( $data === NULL )
 		{
-			$values = $this->as_array( FALSE );
-		}
-		elseif ( $supplied_fields_only === TRUE)
-		{
-			/**
-			 * We always have to validate a complete object
-			 * because validation rules of field A could be dependent
-			 * on the value of field B.
-			 *
-			 * So we add the missing values of the update array
-			 */
-			$values = array_merge( $this->as_array( FALSE ), $data);
-		}
-		else
-		{
-			$values = $data;
+			$data = $this->as_array( FALSE );
 		}
 
-		// Split $values into embedded objects, and object itself
-
-		$object   = array();
+		// Split data into local and embedded
+		$local    = array();
 		$embedded = array();
 
-		foreach ( $values as $field => $value)
+		foreach ( $data as $field => $value)
 		{
 			if ( $this->_fields[$field]['type'] === 'has_one' || $this->_fields[$field]['type'] === 'has_many')
 			{
@@ -940,82 +928,84 @@ abstract class Mango implements Mango_Interface {
 			}
 			else
 			{
-				$object[$field] = $value;
+				$local[$field] = $value;
 			}
 		}
 
-		// Validate object
-
-		$array = Validate::factory($object);
+		// Validate local data
+		$array = Validate::factory($local);
 
 		// Add validation rules
 		$array = $this->_check($array);
 
+		if ( $subject === Mango::CHECK_ONLY)
+		{
+			foreach ( $this->_fields as $field_name => $field_data)
+			{
+				if ( ! isset($data[$field_name]))
+				{
+					// do not validate this field
+					unset($array[$field_name]);
+				}
+			}
+		}
+
+		// Validate
 		if ( ! $array->check())
 		{
 			// Validation failed
 			throw new Mango_Validate_Exception($this->_model,$array);
 		}
 
-		$object = array();
+		// Create array with validated data
+		$values = array();
 
 		foreach ( $array as $field => $value)
 		{
 			// Don't include NULL values from fields that aren't set anyway
 			if ( $value !== NULL || $this->__isset($field))
 			{
-				$object[$field] = $value;
+				$values[$field] = $value;
 			}
 		}
 
-		// Validate embedded objects
-
-		foreach ( $embedded as $field => & $value)
+		// Validate embedded documents
+		if ( $subject !== Mango::CHECK_LOCAL)
 		{
-			if ( ! is_array($value))
+			foreach ( $embedded as $field => $value)
 			{
-				// Invalid data
-				continue;
-			}
-
-			if ( $this->_fields[$field]['type'] === 'has_one')
-			{
-				$value = Mango::factory($this->_fields[$field]['model'], $value, Mango::EXTEND)
-					->check($value);
-			}
-			else
-			{
-				foreach ( $value as $k => & $v)
+				if ( $this->_fields[$field]['type'] === 'has_one')
 				{
-					if ( ! is_array($v))
+					$values[$field] = Mango::factory($this->_fields[$field]['model'], $value, Mango::EXTEND)
+						->check($value, $subject);
+				}
+				elseif ( $this->_fields[$field]['type'] === 'has_many')
+				{
+					$val = array();
+
+					foreach ( $value as $k => $v)
 					{
-						// Invalid data
-						continue;
+						$model = Mango::factory($this->_fields[$field]['model'],$v,Mango::EXTEND);
+	
+						try
+						{
+							$val[$k] = $model->check($v, $subject);
+						}
+						catch ( Mango_Validate_Exception $e)
+						{
+							// add sequence number of failed object to exception
+							$e->seq = $k;
+							throw $e;
+						}
 					}
 
-					$model = Mango::factory($this->_fields[$field]['model'],$v,Mango::EXTEND);
-
-					try
-					{
-						$v = $model->check($v);
-					}
-					catch ( Mango_Validate_Exception $e)
-					{
-						// add sequence number of failed object to exception
-						$e->seq = $k;
-						throw $e;
-					}
+					$values[$field] = $val;
 				}
 			}
 		}
 
-		// Merge object & embedded values
-		$array = array_merge($object,$embedded);
-
 		// Return
-		return $supplied_fields_only
-			? array_intersect_key($array,$values)
-			: $array;
+		return $values;
 	}
 
 	/**
