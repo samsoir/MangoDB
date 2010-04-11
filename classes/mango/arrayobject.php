@@ -266,43 +266,6 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	}
 
 	/*
-	 * Recursively find a delimiter notated key string
-	 *
-	 * @param   string|array  delimiter notated keystring or exploded array
-	 * @param   mixed         default value to return if key not found
-	 * @param   string        delimiter (defaults to dot '.')
-	 * @return  mixed         value (if found) or default value
-	 */
-	public function locate($key, $default = NULL, $delimiter = '.')
-	{
-		if ( ! is_array($key))
-		{
-			$key = explode($delimiter,(string) $key);
-		}
-
-		// fetch next key
-		$next = array_shift($key);
-
-		// read next key
-		$value = isset($this[$next])
-			? $this[$next]
-			: NULL;
-
-		if ( count($key))
-		{
-			// go deeper
-			$value = $value instanceof Mango_ArrayObject
-				? $value->locate($key,$default)
-				: NULL;
-		}
-
-		// return
-		return $value !== NULL
-			? ($value instanceof Mango_Interface ? $value->as_array() : $value)
-			: $default;
-	}
-
-	/*
 	 * Create an (associative) array of values from this array object
 	 *
 	 * $blog->comments->select_list('id','author');
@@ -356,5 +319,116 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 
 		return TRUE;
+	}
+
+
+	/*
+	 * Find a path in array
+	 *
+	 * @param   string|array  delimiter notated keystring or array
+	 * @param   mixed         default value to return if key not found
+	 * @param   string        delimiter (defaults to dot '.')
+	 * @return  mixed         value (if found) or default value
+	 */
+	public function path_get($path, $default = NULL, $delimiter = '.')
+	{
+		if ( $this->_type_hint !== 'set' && $this->_type_hint !== 'array')
+		{
+			throw new Mango_Exception('Recursive loading of path only possible when type hint is set');
+		}
+
+		if ( ! is_array($path))
+		{
+			$path = explode($delimiter,(string) $path);
+		}
+
+		$next = $this;
+
+		while ( count($path) && $next instanceof ArrayObject)
+		{
+			$key = array_shift($path);
+
+			$next = isset($next[$key])
+				? $next[$key]
+				: $default;
+		}
+
+		return ! count($path)
+			? Mango::normalize($next)
+			: $default;
+	}
+
+	/**
+	 * Set path to value
+	 *
+	 * @param   string|array  delimiter notated keystring or array
+	 * @param   mixed         value to store
+	 * @param   string        delimiter (defaults to dot '.')
+	 * @return  void
+	 */
+	public function path_set($path, $value, $delimiter = '.')
+	{
+		if ( $this->_type_hint !== 'set' && $this->_type_hint !== 'array')
+		{
+			throw new Mango_Exception('Recursive loading of path only possible when type hint is set');
+		}
+
+		if ( ! is_array($path))
+		{
+			// Split the keys by dots
+			$path = explode($delimiter, trim($path, $delimiter));
+		}
+
+		$next = $this;
+
+		while ( count($path) > 1)
+		{
+			$next = $next[ array_shift($path) ];
+		}
+
+		$next[ array_shift($path) ] = $value;
+	}
+
+	/**
+	 * Unsets path
+	 *
+	 * @param   string|array  delimiter notated keystring or array
+	 * @param   string        delimiter (defaults to dot '.')
+	 * @return  void
+	 */
+	public function path_unset($path, $delimiter = '.')
+	{
+		if ( $this->_type_hint !== 'set' && $this->_type_hint !== 'array')
+		{
+			throw new Mango_Exception('Recursive loading of path only possible when type hint is set');
+		}
+
+		if ( ! is_array($path))
+		{
+			// Split the keys by dots
+			$path = explode($delimiter, trim($path, $delimiter));
+		}
+
+		$ref  = array();
+		$next = $this;
+
+		foreach ( $path as $key => $value)
+		{
+			if ( ! isset($next[$value]))
+			{
+				break;
+			}
+
+			$ref[$value] = $next;
+			$next = &$next[$value];
+		}
+
+		foreach ( array_reverse($ref) as $key => $field)
+		{
+			if ( ($field[$key] instanceof ArrayObject && count($field[$key]) === 0) || ! $field[$key] instanceof ArrayObject)
+			{
+				unset($field[$key]);
+			}
+		}
 	}
 }
