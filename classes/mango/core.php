@@ -1166,7 +1166,7 @@ abstract class Mango_Core implements Mango_Interface {
 				}
 			break;
 			case 'has_many':
-				$value = new Mango_Set($value, $field['model']);
+				$value = new Mango_Set($value, $field['model'], TRUE);
 			break;
 			case 'counter':
 				$value = new Mango_Counter($value);
@@ -1175,7 +1175,7 @@ abstract class Mango_Core implements Mango_Interface {
 				$value = new Mango_Array($value, isset($field['type_hint']) ? $field['type_hint'] : NULL);
 			break;
 			case 'set':
-				$value = new Mango_Set($value, isset($field['type_hint']) ? $field['type_hint'] : NULL);
+				$value = new Mango_Set($value, isset($field['type_hint']) ? $field['type_hint'] : NULL, isset($field['unique']) ? $field['unique'] : FALSE);
 			break;
 			case 'mixed':
 				$value = ! is_object($value)

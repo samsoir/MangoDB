@@ -12,6 +12,26 @@ class Mango_Set extends Mango_ArrayObject {
 	 */
 	protected $_mode;
 
+	/**
+	 * Requires all values in set to be unique
+	 */
+	protected $_unique;
+
+	/*
+	 * Constructor
+	 *
+	 * @param   array    Current data
+	 * @param   string   Type Hint
+	 * @param   boolean  If all values in set should be unique
+	 * @return  void
+	 */
+	public function __construct($array = array(), $type_hint = NULL, $unique = FALSE)
+	{
+		$this->_unique = $unique;
+
+		parent::__construct($array, $type_hint);
+	}
+
 	/*
 	 * Set status to saved
 	 */
@@ -39,6 +59,7 @@ class Mango_Set extends Mango_ArrayObject {
 		{
 			case 'push':
 			case 'set':
+			case 'addToSet':
 				foreach ( $this->_changed as $index)
 				{
 					$elements[] = $this->offsetGet($index);
@@ -75,6 +96,19 @@ class Mango_Set extends Mango_ArrayObject {
 				{
 					$changes_local = arr::merge($changes_local, array('$set' => array( implode('.',$prefix) . '.' . $set_index => $elements[$index])));
 				}
+			break;
+			case 'unset':
+				foreach ( $this->_changed as $unset_index)
+				{
+					$changes_local = arr::merge($changes_local, array('$unset' => array( implode('.',$prefix) . '.' . $unset_index => TRUE)));
+				}
+			break;
+			case 'addToSet':
+				$elements = count($this->_changed) > 1
+					? array('$each' => $elements)
+					: $elements[0];
+
+				$changes_local = array('$addToSet' => array(implode('.',$prefix) => $elements));
 			break;
 			case 'push':
 			case 'pull':
@@ -141,7 +175,7 @@ class Mango_Set extends Mango_ArrayObject {
 
 		$mode = is_int($index) && $this->offsetExists($index)
 			? 'set'
-			: 'push';
+			: ($this->_unique ? 'push' : 'addToSet');
 
 		if ( isset($this->_mode) && $this->_mode !== $mode)
 		{
@@ -151,18 +185,21 @@ class Mango_Set extends Mango_ArrayObject {
 			));
 		}
 
-		if ( $this->find($this->load_type($newval)) !== FALSE)
+		if ( $this->_unique && $this->find($this->load_type($newval)) !== FALSE)
 		{
-			// value has been added to set already
+			// value has been added already
 			return TRUE;
 		}
 
 		// Set value
 		$index = parent::offsetSet($index,$newval);
 
-		// set mode & index of changed value
-		$this->_mode = $mode;
-		$this->_changed[] = $index;
+		if ( is_int($index))
+		{
+			// value was added successfully, set mode & index of changed value
+			$this->_mode = $mode;
+			$this->_changed[] = $index;
+		}
 
 		return TRUE;
 	}
@@ -181,16 +218,28 @@ class Mango_Set extends Mango_ArrayObject {
 			throw new Mango_Exception('Mango_Sets only supports numerical keys');
 		}
 
-		if ( isset($this->_mode) && $this->_mode !== 'pull')
+		if ( ! $this->offsetExists($index))
 		{
-			throw new Mango_Exception('MongoDB cannot pull when already in :mode mode', array(
-				':mode'   => $this->_mode
+			return;
+		}
+
+		$mode = $this->_unique
+			? 'pull'
+			: 'unset';
+
+		if ( isset($this->_mode) && $this->_mode !== $mode)
+		{
+			throw new Mango_Exception('MongoDB cannot :new_mode when already in :mode mode', array(
+				':new_mode' => $mode,
+				':mode'     => $this->_mode
 			));
 		}
 
 		// set mode & pulled value
-		$this->_mode = 'pull';
-		$this->_changed[] = $this->offsetGet($index);
+		$this->_mode = $mode;
+		$this->_changed[] = $this->_unique
+			? $this->offsetGet($index)
+			: $index;
 
 		parent::offsetUnset($index);
 	}
