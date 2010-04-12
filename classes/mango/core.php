@@ -491,7 +491,7 @@ abstract class Mango_Core implements Mango_Interface {
 						$this->_fields[$name . '_id'] = array('type'=>'MongoId');
 					break;
 					case 'has_and_belongs_to_many':
-						$this->_fields[$name . '_ids'] = array('type'=>'set');
+						$this->_fields[$name . '_ids'] = array('type'=>'set', 'unique' => TRUE);
 					break;
 				}
 			}

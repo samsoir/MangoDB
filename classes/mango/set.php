@@ -175,7 +175,7 @@ class Mango_Set extends Mango_ArrayObject {
 
 		$mode = is_int($index) && $this->offsetExists($index)
 			? 'set'
-			: ($this->_unique ? 'push' : 'addToSet');
+			: ($this->_unique ? 'addToSet' : 'push');
 
 		if ( isset($this->_mode) && $this->_mode !== $mode)
 		{
