@@ -233,39 +233,6 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	}
 
 	/*
-	 * Move pointer to end of array and return value
-	 */
-	public function end()
-	{
-		return end($this->as_array());
-	}
-
-	/*
-	 * Pop last value from array and return
-	 */
-	public function pop()
-	{
-		// move pointer to end
-		$arr = $this->as_array();
-		end($arr);
-
-		$key = key($arr);
-
-		if ( $this->offsetExists($key))
-		{
-			$value = $this->offsetGet($key);
-
-			return $this->offsetUnset($key) !== FALSE
-				? $value
-				: FALSE;
-		}
-		else
-		{
-			return FALSE;
-		}
-	}
-
-	/*
 	 * Create an (associative) array of values from this array object
 	 *
 	 * $blog->comments->select_list('id','author');

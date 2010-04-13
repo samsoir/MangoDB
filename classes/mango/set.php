@@ -91,6 +91,9 @@ class Mango_Set extends Mango_ArrayObject {
 
 		switch ( $this->_mode)
 		{
+			case 'pop':
+				$changes_local = array('$pop' => array(implode('.',$prefix) => $this->_changed));
+			break;
 			case 'set':
 				foreach ( $this->_changed as $index => $set_index)
 				{
@@ -130,20 +133,19 @@ class Mango_Set extends Mango_ArrayObject {
 		// Second, get all changes made within children elements themselves
 		$changes_children = array();
 
-		// check elements that weren't modified directly for internal changes
 		foreach ( $this as $index => $value)
 		{
-			if ( $this->_mode === 'pull' || $this->_mode === NULL || ! in_array($index, $this->_changed))
+			if ( ! is_array($this->_changed) || ! in_array($index, $this->_changed))
 			{
-				if( $value instanceof Mango_Interface)
+				if ( $value instanceof Mango_Interface)
 				{
 					$changes_children = arr::merge($changes_children, $value->changed($update, array_merge($prefix,array($index))));
 				}
 			}
 		}
 
-		// If we're pulling/pushing, any other modifier is disallowed (by MongoDB)
-		if ( $this->_mode === 'push' || $this->_mode === 'pull')
+		// Some modifiers don't work well together in Mongo - check for mistakes
+		if ( isset($this->_mode) && $this->_mode !== 'set' && $this->_mode !== 'unset' && ! empty($changes_children))
 		{
 			if ( ! empty($changes_children))
 			{
@@ -243,4 +245,47 @@ class Mango_Set extends Mango_ArrayObject {
 
 		parent::offsetUnset($index);
 	}
+
+	/*
+	 * Pop last value from array and return value
+	 */
+	public function pop()
+	{
+		return $this->_pop(true);
+	}
+
+	/*
+	 * Shift first value from array and return value
+	 */
+	public function shift()
+	{
+		return $this->_pop(false);
+	}
+
+	protected function _pop($pop)
+	{
+		if ( isset($this->_mode))
+		{
+			throw new Mango_Exception('MongoDB cannot pop when already in :mode mode', array(
+				':mode'     => $this->_mode
+			));
+		}
+
+		if ( count($this) === 0)
+		{
+			// nothing to pop/shift
+			return NULL;
+		}
+
+		$this->_mode = 'pop';
+		$this->_changed = $pop ? 1 : -1;
+
+		$offset = $pop ? count($this) - 1 : 0;
+		$value  = $this->offsetGet($offset);
+
+		parent::offsetUnset($offset);
+
+		return $value;
+	}
+
 }
