@@ -932,40 +932,43 @@ abstract class Mango_Core implements Mango_Interface {
 			}
 		}
 
-		// Validate local data
-		$array = Validate::factory($local);
-
-		// Add validation rules
-		$array = $this->_check($array);
-
-		if ( $subject === Mango::CHECK_ONLY)
-		{
-			foreach ( $this->_fields as $field_name => $field_data)
-			{
-				if ( ! isset($data[$field_name]))
-				{
-					// do not validate this field
-					unset($array[$field_name]);
-				}
-			}
-		}
-
-		// Validate
-		if ( ! $array->check())
-		{
-			// Validation failed
-			throw new Mango_Validate_Exception($this->_model,$array);
-		}
-
 		// Create array with validated data
 		$values = array();
 
-		foreach ( $array as $field => $value)
+		// Validate local data (if required / available)
+		if ( $subject !== Mango::CHECK_ONLY || count($local))
 		{
-			// Don't include NULL values from fields that aren't set anyway
-			if ( $value !== NULL || $this->__isset($field))
+			$array = Validate::factory($local);
+
+			// Add validation rules
+			$array = $this->_check($array);
+
+			if ( $subject === Mango::CHECK_ONLY)
 			{
-				$values[$field] = $value;
+				foreach ( $this->_fields as $field_name => $field_data)
+				{
+					if ( ! isset($data[$field_name]))
+					{
+						// do not validate this field
+						unset($array[$field_name]);
+					}
+				}
+			}
+
+			// Validate
+			if ( ! $array->check())
+			{
+				// Validation failed
+				throw new Mango_Validate_Exception($this->_model,$array);
+			}
+
+			foreach ( $array as $field => $value)
+			{
+				// Don't include NULL values from fields that aren't set anyway
+				if ( $value !== NULL || $this->__isset($field))
+				{
+					$values[$field] = $value;
+				}
 			}
 		}
 

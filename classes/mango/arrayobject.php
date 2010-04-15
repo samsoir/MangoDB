@@ -376,8 +376,13 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			$path = explode($delimiter, trim($path, $delimiter));
 		}
 
-		$ref  = array();
+		// separate arrays for keys and references because array_reverse changes numerical keys
+		$refs = array();
+		$keys = array();
+
 		$next = $this;
+
+		$last = end($path);
 
 		foreach ( $path as $key => $value)
 		{
@@ -386,13 +391,21 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 				break;
 			}
 
-			$ref[$value] = $next;
+			$keys[] = $value;
+			$refs[] = $next;
+
 			$next = &$next[$value];
 		}
 
-		foreach ( array_reverse($ref) as $key => $field)
+		// reverse arrays
+		$keys = array_reverse($keys);
+		$refs = array_reverse($refs);
+
+		foreach ( $keys as $seq => $key)
 		{
-			if ( ($field[$key] instanceof ArrayObject && count($field[$key]) === 0) || ! $field[$key] instanceof ArrayObject)
+			$field = $refs[$seq];
+
+			if ( $key === $last || ($field[$key] instanceof ArrayObject && count($field[$key]) === 0))
 			{
 				unset($field[$key]);
 			}
