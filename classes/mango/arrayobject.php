@@ -299,11 +299,6 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	 */
 	public function path_get($path, $default = NULL, $delimiter = '.')
 	{
-		if ( $this->_type_hint !== 'set' && $this->_type_hint !== 'array')
-		{
-			throw new Mango_Exception('Recursive loading of path only possible when type hint is set');
-		}
-
 		if ( ! is_array($path))
 		{
 			$path = explode($delimiter,(string) $path);
@@ -311,7 +306,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 
 		$next = $this;
 
-		while ( count($path) && $next instanceof ArrayObject)
+		while ( count($path) && (is_array($next) || $next instanceof ArrayObject))
 		{
 			$key = array_shift($path);
 
