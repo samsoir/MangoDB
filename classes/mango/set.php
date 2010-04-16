@@ -288,4 +288,15 @@ class Mango_Set extends Mango_ArrayObject {
 		return $value;
 	}
 
+	/*
+	 * Returns object as array
+	 *
+	 * @param   boolean  fetch value directly from object
+	 * @return  array    array representation of array object
+	 */
+	public function as_array( $clean = TRUE )
+	{
+		// ensures a sequential array is returned
+		return array_values(parent::as_array($clean));
+	}
 }
