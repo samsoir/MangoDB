@@ -231,6 +231,12 @@ abstract class Mango_Core implements Mango_Interface {
 	 */
 	public function db()
 	{
+		if ( ! is_object($this->_db) )
+		{
+			// Initialize DB
+			$this->_db = MangoDB::instance($this->_db);
+		}
+
 		return $this->_db;
 	}
 
@@ -495,12 +501,6 @@ abstract class Mango_Core implements Mango_Interface {
 					break;
 				}
 			}
-
-			// Initialize DB
-			if ( ! is_object($this->_db) )
-			{
-				$this->_db = MangoDB::instance($this->_db);
-			}
 		}
 
 		$this->_init = TRUE;
@@ -741,7 +741,7 @@ abstract class Mango_Core implements Mango_Interface {
 
 		if ( $limit === 1 && $sort === NULL && $skip === NULL)
 		{
-			$values = $this->_db->find_one($this->_collection,$criteria,$fields);
+			$values = $this->db()->find_one($this->_collection,$criteria,$fields);
 
 			return $values === NULL
 				? $this
@@ -749,7 +749,7 @@ abstract class Mango_Core implements Mango_Interface {
 		}
 		else
 		{
-			$values = $this->_db->find($this->_collection,$criteria,$fields);
+			$values = $this->db()->find($this->_collection,$criteria,$fields);
 
 			if ( is_int($limit))
 			{
@@ -790,10 +790,10 @@ abstract class Mango_Core implements Mango_Interface {
 		if ( $values = $this->changed(FALSE))
 		{
 			// insert - MongoDB driver will generate unique _id value (if missing)
-			$this->_db->insert($this->_collection, $values);
+			$this->db()->insert($this->_collection, $values);
 
 			// check for success
-			$err = $this->_db->last_error();
+			$err = $this->db()->last_error();
 
 			if ( $err['err'])
 			{
@@ -832,7 +832,7 @@ abstract class Mango_Core implements Mango_Interface {
 		{
 			$criteria['_id'] = $this->_id;
 
-			$this->_db->update($this->_collection, $criteria, $values, FALSE);
+			$this->db()->update($this->_collection, $criteria, $values, FALSE);
 
 			$this->saved();
 		}
@@ -882,13 +882,13 @@ abstract class Mango_Core implements Mango_Interface {
 
 					if ( ! empty($set))
 					{
-						$this->_db->update( $name, array('_id' => array('$in' => $set)), array('$pull' => array(Inflector::plural($this->_model) . '_ids' => $this->_id)), array('multiple' => TRUE));
+						$this->db()->update( $name, array('_id' => array('$in' => $set)), array('$pull' => array(Inflector::plural($this->_model) . '_ids' => $this->_id)), array('multiple' => TRUE));
 					}
 				break;
 			}
 		}
 
-		$this->_db->remove($this->_collection, array('_id'=>$this->_id), FALSE);
+		$this->db()->remove($this->_collection, array('_id'=>$this->_id), FALSE);
 
 		return $this;
 	}
@@ -1405,7 +1405,7 @@ abstract class Mango_Core implements Mango_Interface {
 			return TRUE;
 		}
 
-		$found = $this->_db->find_one( $this->_collection, array($field => $array[$field]), array('_id'=>TRUE));
+		$found = $this->db()->find_one( $this->_collection, array($field => $array[$field]), array('_id'=>TRUE));
 
 		if ( $found !== NULL)
 		{
