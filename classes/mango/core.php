@@ -736,14 +736,6 @@ abstract class Mango_Core implements Mango_Interface {
 
 		$criteria += $this->changed(FALSE);
 
-		if ( isset($criteria['_id']))
-		{
-			// if ID is set, we don't need any other value
-			$criteria = array(
-				'_id' => $criteria['_id']
-			);
-		}
-
 		// resets $this->_changed array
 		$this->clear();
 

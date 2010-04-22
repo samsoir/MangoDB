@@ -23,16 +23,11 @@ class Mango_Iterator implements Iterator, Countable {
 	{
 		$array = array();
 
-		if ( $this->count())
+		foreach ( $this as $document)
 		{
-			$this->rewind();
-
-			foreach ( $this as $document)
-			{
-				$array[] = $objects 
-					? $document
-					: $document->as_array( FALSE );
-			}
+			$array[] = $objects 
+				? $document
+				: $document->as_array( FALSE );
 		}
 
 		return $array;
