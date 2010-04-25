@@ -83,7 +83,9 @@ class Mango_Set extends Mango_ArrayObject {
 		if ( $update === FALSE)
 		{
 			// no more changes possible after this
-			return arr::path_set($prefix,$elements);
+			return count($elements)
+				? arr::path_set($prefix,$elements)
+				: array();
 		}
 
 		// First, get all changes made to the elements of this set directly
