@@ -1063,7 +1063,7 @@ abstract class Mango_Core implements Mango_Interface {
 			}
 
 			// value has to be unique
-			if ( isset($field['unique']) && $field['unique'] === TRUE)
+			if ( isset($field['unique']) && ! in_array($field['type'], array('set','has_many')) && $field['unique'] === TRUE)
 			{
 				$data->callback($name,array($this,'_is_unique'));
 			}
@@ -1161,7 +1161,7 @@ abstract class Mango_Core implements Mango_Interface {
 				}
 			break;
 			case 'has_many':
-				$value = new Mango_Set($value, $field['model'], TRUE);
+				$value = new Mango_Set($value, $field['model'], ! isset($field['unique']) ? TRUE : $field['unique']);
 			break;
 			case 'counter':
 				$value = new Mango_Counter($value);
