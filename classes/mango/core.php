@@ -1179,35 +1179,6 @@ abstract class Mango_Core implements Mango_Interface {
 			break;
 		}
 
-		if ( $value !== NULL)
-		{
-			switch ( $field['type'])
-			{
-				case 'int':
-				case 'float':
-					if ( isset($field['min_value']) AND $value < $field['min_value'])
-					{
-						$value = NULL;
-					}
-					if ( isset($field['max_value']) AND $value > $field['max_value'])
-					{
-						$value = NULL;
-					}
-				break;
-				case 'email':
-				case 'string':
-					if ( isset($field['min_length']) AND UTF8::strlen($value) < $field['min_length'])
-					{
-						$value = NULL;
-					}
-					if ( isset($field['max_length']) AND UTF8::strlen($value) > $field['max_length'])
-					{
-						$value = NULL;
-					}
-				break;
-			}
-		}
-
 		return $value;
 	}
 
