@@ -144,6 +144,11 @@ class MangoDB {
 		return $this->_db->selectCollection($collection_name)->ensureIndex($keys);
 	}
 
+	public function command( array $data)
+	{
+		return $this->_call('command', array(), $data);
+	}
+
 	public function execute( $code, array $args = array() )
 	{
 		return $this->_call('execute', array(
@@ -334,6 +339,9 @@ class MangoDB {
 			break;
 			case 'drop_collection':
 				$r = $this->_db->dropCollection($name);
+			break;
+			case 'command':
+				$r = $this->_db->command($values);
 			break;
 			case 'execute':
 				$r = $this->_db->execute($code,$args);
