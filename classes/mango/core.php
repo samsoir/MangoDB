@@ -1050,7 +1050,7 @@ abstract class Mango_Core implements Mango_Interface {
 			// field is required
 			if ( isset($field['required']) AND $field['required'] === TRUE)
 			{
-				$data->rule($name,'not_empty');
+				$data->rule($name,'required');
 			}
 
 			// min/max length/value
