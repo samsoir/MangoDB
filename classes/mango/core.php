@@ -241,6 +241,28 @@ abstract class Mango_Core implements Mango_Interface {
 	}
 
 	/**
+	 * Retrieve creation timestamp from MongoID object
+	 *
+	 * @return   int   Timestamp
+	 */
+	public function get_time()
+	{
+		if ( ! $this->loaded())
+		{
+			throw new Mango_Exception('Creation timestamp is only available on created documents');
+		}
+
+		if ( $this->_fields['_id']['type'] !== 'MongoId')
+		{
+			throw new Mango_Exception('Creation timestamp can only be deduced from MongoId document IDs, you\'re using: :id', array(
+				':id' => $this->_fields['_id']['type']
+			));
+		}
+
+		return $this->__get('_id')->getTimestamp();
+	}
+
+	/**
 	 * Get the value of a field.
 	 *
 	 * @throws  Mango_Exception  field does not exist
