@@ -319,7 +319,7 @@ abstract class Mango_Core implements Mango_Interface {
 		}
 		elseif ( isset($this->_relations[$name]))
 		{
-			if ( !isset($this->_related[$name]))
+			if ( ! isset($this->_related[$name]))
 			{
 				$relation = $this->_relations[$name];
 
@@ -499,7 +499,15 @@ abstract class Mango_Core implements Mango_Interface {
 			{
 				if ( $relation['type'] === 'has_and_belongs_to_many')
 				{
-					$relation['model'] = Inflector::singular($name);
+					$relation['model'] = isset($relation['model']) 
+						 ? $relation['model']
+						 : Inflector::singular($name);
+
+					$relation['related_relation'] = isset($relation['related_relation'])
+						? $relation['related_relation']
+						: Inflector::plural($this->_model);
+
+					//$relation['model'] = Inflector::singular($name);
 				}
 				elseif ( ! isset($relation['model']))
 				{
@@ -904,7 +912,7 @@ abstract class Mango_Core implements Mango_Interface {
 
 					if ( ! empty($set))
 					{
-						$this->db()->update( $name, array('_id' => array('$in' => $set)), array('$pull' => array(Inflector::plural($this->_model) . '_ids' => $this->_id)), array('multiple' => TRUE));
+						$this->db()->update( $name, array('_id' => array('$in' => $set)), array('$pull' => array($relation['related_relation'] . '_ids' => $this->_id)), array('multiple' => TRUE));
 					}
 				break;
 			}
@@ -1219,18 +1227,60 @@ abstract class Mango_Core implements Mango_Interface {
 			$name = (string) $model;
 		}
 
-		$name_plural = Inflector::plural($name);
+		return $this->_has($model, Inflector::plural($name));
+	}
 
-		if ( isset($this->_relations[$name_plural]) && $this->_relations[$name_plural]['type'] === 'has_and_belongs_to_many')
+	/**
+	 * Adds model to relation (if not already)
+	 *
+	 * @throws  Mango_Exception  when relation does not exist
+	 * @param   Mango    model
+	 * @param   string   alternative name (if hm column has a name other than model name)
+	 * @return  boolean  relation exists
+	 */
+	public function add(Mango $model, $name = NULL)
+	{
+		if ( $name === NULL)
+		{
+			$name = (string) $model;
+		}
+
+		return $this->_add($model, Inflector::plural($name));
+	}
+
+	/**
+	 * Removes related model
+	 *
+	 * @throws  Mango_Exception  when relation does not exist
+	 * @param   Mango    model
+	 * @param   string   alternative name (if hm column has a name other than model name)
+	 * @return  boolean  model is gone
+	 */
+	public function remove(Mango $model, $name = NULL)
+	{
+		if ( $name === NULL)
+		{
+			$name = (string) $model;
+		}
+
+		return $this->_remove($model, Inflector::plural($name));
+	}
+
+	/**
+	 * Internal has method. Please use Mango::has
+	 */
+	public function _has(Mango $model, $relation)
+	{
+		if ( isset($this->_relations[$relation]) && $this->_relations[$relation]['type'] === 'has_and_belongs_to_many')
 		{
 			// related HABTM 
-			$field = $name_plural . '_ids';
+			$field = $relation . '_ids';
 			$value = $model->_id;
 		}
-		elseif ( isset($this->_fields[$name_plural]) && $this->_fields[$name_plural]['type'] === 'has_many' )
+		elseif ( isset($this->_fields[$relation]) && $this->_fields[$relation]['type'] === 'has_many' )
 		{
 			// embedded Has Many
-			$field = $name_plural;
+			$field = $relation;
 			$value = $model;
 		}
 		else
@@ -1245,29 +1295,17 @@ abstract class Mango_Core implements Mango_Interface {
 	}
 
 	/**
-	 * Adds model to relation (if not already)
-	 *
-	 * @throws  Mango_Exception  when relation does not exist
-	 * @param   Mango    model
-	 * @param   string   alternative name (if hm column has a name other than model name)
-	 * @return  boolean  relation exists
+	 * Internal add method. Please use Mango::add.
 	 */
-	public function add(Mango $model, $name = NULL, $returned = FALSE)
+	public function _add(Mango $model, $relation, $returned = FALSE)
 	{
-		if ( $name === NULL)
-		{
-			$name = (string) $model;
-		}
-
-		if ( $this->has($model,$name))
+		if ( $this->_has($model,$relation))
 		{
 			// already added
 			return TRUE;
 		}
 
-		$name_plural = Inflector::plural($name);
-
-		if ( isset($this->_relations[$name_plural]) && $this->_relations[$name_plural]['type'] === 'has_and_belongs_to_many')
+		if ( isset($this->_relations[$relation]) && $this->_relations[$relation]['type'] === 'has_and_belongs_to_many')
 		{
 			// related HABTM
 			if ( ! $model->loaded() || ! $this->loaded() )
@@ -1275,65 +1313,50 @@ abstract class Mango_Core implements Mango_Interface {
 				return FALSE;
 			}
 
-			$field = $name_plural . '_ids';
+			$field = $relation . '_ids';
 
 			// try to push
 			if ( $this->__get($field)->push($model->_id))
 			{
 				// push succeed
-				if ( isset($this->_related[$name_plural]) )
-				{
-					// Related models have been loaded already, add this one
-					$this->_related[$name_plural][] = $model;
-				}
+
+				// column has to be reloaded
+				unset($this->_related[$relation]);
 
 				if ( ! $returned )
 				{
 					// add relation to model as well
-					$model->add($this,$this->_model,TRUE);
+					$model->_add($this,$this->_relations[$relation]['related_relation'],TRUE);
 				}
 			}
 
 			// model has been added or was already added
 			return TRUE;
 		}
-		elseif ( isset($this->_fields[$name_plural]) && $this->_fields[$name_plural]['type'] === 'has_many' )
+		elseif ( isset($this->_fields[$relation]) && $this->_fields[$relation]['type'] === 'has_many' )
 		{
-			return $this->__get($name_plural)->push($model);
+			return $this->__get($relation)->push($model);
 		}
 		else
 		{
-			throw new Mango_Exception('model :model has no relation with model :related',
-				array(':model' => $this->_model, ':related' => $name));
+			throw new Mango_Exception('there is no :relation specified', array(':relation' => $relation));
 		}
 
 		return FALSE;
 	}
 
 	/**
-	 * Removes related model
-	 *
-	 * @throws  Mango_Exception  when relation does not exist
-	 * @param   Mango    model
-	 * @param   string   alternative name (if hm column has a name other than model name)
-	 * @return  boolean  model is gone
+	 * Internal remove method. Please use Mango::remove
 	 */
-	public function remove(Mango $model, $name = NULL,$returned = FALSE)
+	public function _remove(Mango $model, $relation, $returned = FALSE)
 	{
-		if ( $name === NULL)
-		{
-			$name = (string) $model;
-		}
-
-		if ( ! $this->has($model,$name))
+		if ( ! $this->_has($model,$relation))
 		{
 			// already removed
 			return TRUE;
 		}
 
-		$name_plural = Inflector::plural($name);
-
-		if ( isset($this->_relations[$name_plural]) && $this->_relations[$name_plural]['type'] === 'has_and_belongs_to_many')
+		if ( isset($this->_relations[$relation]) && $this->_relations[$relation]['type'] === 'has_and_belongs_to_many')
 		{
 			// related HABTM
 			if ( ! $model->loaded() || ! $this->loaded())
@@ -1341,45 +1364,34 @@ abstract class Mango_Core implements Mango_Interface {
 				return FALSE;
 			}
 
-			$field = $name_plural . '_ids';
+			$field = $relation . '_ids';
 
 			// try to pull
 			if ( $this->__get($field)->pull($model->_id))
 			{
 				// pull succeed
-				if ( isset($this->_related[$name_plural]) )
-				{
-					// Related models have been loaded already, remove this one
-					$related = array();
-					foreach ( $this->_related[$name_plural] as $key => $object)
-					{
-						if ( $object->_id === $model->_id)
-						{
-							unset($this->_related[$name_plural]);
-							break;
-						}
-					}
-				}
+
+				// column has to be reloaded
+				unset($this->_related[$relation]);
 
 				if ( ! $returned )
 				{
-					// add relation to model as well
-					$model->remove($this,$this->_model,TRUE);
+					// remove relation from related model as well
+					$model->_remove($this,$this->_relations[$relation]['related_relation'],TRUE);
 				}
 			}
 
 			// model has been removed or was already removed
 			return TRUE;
 		}
-		elseif ( isset($this->_fields[$name_plural]) && $this->_fields[$name_plural]['type'] === 'has_many' )
+		elseif ( isset($this->_fields[$relation]) && $this->_fields[$relation]['type'] === 'has_many' )
 		{
 			// embedded Has_Many
-			return $this->__get($name_plural)->pull($model);
+			return $this->__get($relation)->pull($model);
 		}
 		else
 		{
-			throw new Mango_Exception('model :model has no relation with model :related',
-				array(':model' => $this->_model, ':related' => $name));
+			throw new Mango_Exception('there is no :relation specified', array(':relation' => $relation));
 		}
 
 		return FALSE;
