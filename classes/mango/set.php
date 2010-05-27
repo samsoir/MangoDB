@@ -137,7 +137,7 @@ class Mango_Set extends Mango_ArrayObject {
 
 		foreach ( $this as $index => $value)
 		{
-			if ( ! is_array($this->_changed) || ! in_array($index, $this->_changed))
+			if ( ! is_array($this->_changed) || ! in_array($this->_mode, array('push','set','addToSet')) || ! in_array($index, $this->_changed))
 			{
 				if ( $value instanceof Mango_Interface)
 				{
