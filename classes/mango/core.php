@@ -1215,10 +1215,9 @@ abstract class Mango_Core implements Mango_Interface {
 	/**
 	 * Checks if model is related to supplied model
 	 *
-	 * @throws  Mango_Exception  when relation does not exist
-	 * @param   Mango    model
-	 * @param   string   alternative name (if hm column has a name other than model name)
-	 * @return  boolean  model is related
+	 * @param   Mango    Model to check
+	 * @param   string   Alternative name of model (optional)
+	 * @return  boolean  Model is related
 	 */
 	public function has(Mango $model, $name = NULL)
 	{
@@ -1227,16 +1226,17 @@ abstract class Mango_Core implements Mango_Interface {
 			$name = (string) $model;
 		}
 
-		return $this->_has($model, Inflector::plural($name));
+		return $this->has_in_relation($model, Inflector::plural($name));
 	}
 
 	/**
-	 * Adds model to relation (if not already)
+	 * Shortcut to add a model to a relation (HABTM or embedded has_many)
+	 * See Mango::add_relation
 	 *
-	 * @throws  Mango_Exception  when relation does not exist
-	 * @param   Mango    model
-	 * @param   string   alternative name (if hm column has a name other than model name)
-	 * @return  boolean  relation exists
+	 * @param   Mango    Model to add
+	 * @param   string   Alternative name of model (optional)
+	 * @return  boolean  Model was added
+	 * @throws  No such relation exists
 	 */
 	public function add(Mango $model, $name = NULL)
 	{
@@ -1245,16 +1245,17 @@ abstract class Mango_Core implements Mango_Interface {
 			$name = (string) $model;
 		}
 
-		return $this->_add($model, Inflector::plural($name));
+		return $this->add_to_relation($model, Inflector::plural($name));
 	}
 
 	/**
-	 * Removes related model
+	 * Shortcut to remove a model from a relation (HABTM or embedded has_many)
+	 * See Mango::remove_relation
 	 *
-	 * @throws  Mango_Exception  when relation does not exist
-	 * @param   Mango    model
-	 * @param   string   alternative name (if hm column has a name other than model name)
-	 * @return  boolean  model is gone
+	 * @param   Mango    Model to remove
+	 * @param   string   Alternative name of model (optional)
+	 * @return  boolean  Model was removed
+	 * @throws  No such relation exists
 	 */
 	public function remove(Mango $model, $name = NULL)
 	{
@@ -1263,13 +1264,17 @@ abstract class Mango_Core implements Mango_Interface {
 			$name = (string) $model;
 		}
 
-		return $this->_remove($model, Inflector::plural($name));
+		return $this->remove_from_relation($model, Inflector::plural($name));
 	}
 
 	/**
-	 * Internal has method. Please use Mango::has
+	 * Checks if model is related to supplied model
+	 *
+	 * @param   Mango    Model to check
+	 * @param   string   Alternative name of relation (optional)
+	 * @return  boolean  Model is related
 	 */
-	public function _has(Mango $model, $relation)
+	public function has_in_relation(Mango $model, $relation)
 	{
 		if ( isset($this->_relations[$relation]) && $this->_relations[$relation]['type'] === 'has_and_belongs_to_many')
 		{
@@ -1295,11 +1300,17 @@ abstract class Mango_Core implements Mango_Interface {
 	}
 
 	/**
-	 * Internal add method. Please use Mango::add.
+	 * Adds model to relation
+	 *
+	 * @param   Mango    Model to add
+	 * @param   string   Alternative name of relation (optional)
+	 * @return  boolean  Model was added
+	 * @return  boolean  Model was added to related model as well (used internally for HABTM)
+	 * @throws  No such relation exists
 	 */
-	public function _add(Mango $model, $relation, $returned = FALSE)
+	public function add_to_relation(Mango $model, $relation, $returned = FALSE)
 	{
-		if ( $this->_has($model,$relation))
+		if ( $this->has_in_relation($model,$relation))
 		{
 			// already added
 			return TRUE;
@@ -1326,7 +1337,7 @@ abstract class Mango_Core implements Mango_Interface {
 				if ( ! $returned )
 				{
 					// add relation to model as well
-					$model->_add($this,$this->_relations[$relation]['related_relation'],TRUE);
+					$model->add_to_relation($this,$this->_relations[$relation]['related_relation'],TRUE);
 				}
 			}
 
@@ -1346,11 +1357,17 @@ abstract class Mango_Core implements Mango_Interface {
 	}
 
 	/**
-	 * Internal remove method. Please use Mango::remove
+	 * Removes model to relation
+	 *
+	 * @param   Mango    Model to remove
+	 * @param   string   Alternative name of relation (optional)
+	 * @return  boolean  Model was removed
+	 * @return  boolean  Model was removed from related model as well (used internally for HABTM)
+	 * @throws  No such relation exists
 	 */
-	public function _remove(Mango $model, $relation, $returned = FALSE)
+	public function remove_from_relation(Mango $model, $relation, $returned = FALSE)
 	{
-		if ( ! $this->_has($model,$relation))
+		if ( ! $this->has_in_relation($model,$relation))
 		{
 			// already removed
 			return TRUE;
@@ -1377,7 +1394,7 @@ abstract class Mango_Core implements Mango_Interface {
 				if ( ! $returned )
 				{
 					// remove relation from related model as well
-					$model->_remove($this,$this->_relations[$relation]['related_relation'],TRUE);
+					$model->remove_from_relation($this,$this->_relations[$relation]['related_relation'],TRUE);
 				}
 			}
 
