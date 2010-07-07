@@ -211,7 +211,7 @@ class MangoDB {
 		));
 	}
 
-	public function group( $collection_name, array $keys , array $initial , string $reduce, array $condition= array() )
+	public function group( $collection_name, array $keys , array $initial , $reduce, array $condition= array() )
 	{
 		return $this->_call('group', array(
 			'collection_name' => $collection_name,

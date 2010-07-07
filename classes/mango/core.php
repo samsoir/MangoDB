@@ -506,8 +506,6 @@ abstract class Mango_Core implements Mango_Interface {
 					$relation['related_relation'] = isset($relation['related_relation'])
 						? $relation['related_relation']
 						: Inflector::plural($this->_model);
-
-					//$relation['model'] = Inflector::singular($name);
 				}
 				elseif ( ! isset($relation['model']))
 				{
@@ -1291,7 +1289,7 @@ abstract class Mango_Core implements Mango_Interface {
 		else
 		{
 			throw new Mango_Exception('model :model has no relation with model :related',
-				array(':model' => $this->_model, ':related' => $name));
+				array(':model' => $this->_model, ':related' => $relation));
 		}
 
 		return isset($field) 
