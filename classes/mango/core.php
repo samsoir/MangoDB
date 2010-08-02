@@ -942,13 +942,16 @@ abstract class Mango_Core implements Mango_Interface {
 
 		foreach ( $data as $field => $value)
 		{
-			if ( $this->_fields[$field]['type'] === 'has_one' || $this->_fields[$field]['type'] === 'has_many')
+			if ( isset($this->_fields[$field]))
 			{
-				$embedded[$field] = $value;
-			}
-			else
-			{
-				$local[$field] = $value;
+				if ( $this->_fields[$field]['type'] === 'has_one' || $this->_fields[$field]['type'] === 'has_many')
+				{
+					$embedded[$field] = $value;
+				}
+				else
+				{
+					$local[$field] = $value;
+				}
 			}
 		}
 
