@@ -830,7 +830,7 @@ abstract class Mango_Core implements Mango_Interface {
 					array(':model' => $this->_model, ':error' => $err['err']));
 			}
 
-			if ( ! isset($this->_object['id']))
+			if ( ! isset($this->_object['_id']))
 			{
 				// Store (generated) MongoID in object
 				$this->_object['_id'] = $this->load_field('_id',$values['_id']);
