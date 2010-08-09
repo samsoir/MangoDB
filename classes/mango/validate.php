@@ -3,6 +3,23 @@
 class Mango_Validate extends Kohana_Validate {
 
 	/**
+	 * XSS Clean Filter
+	 *
+	 * Cleans strings from XSS data. Returns NULL if cleaned string is empty
+	 *
+	 * @param   string   The string to be cleaned
+	 * @return  string   Clean String (or NULL)
+	 */
+	public static function xss_clean($value)
+	{
+		$value = Security::xss_clean($value);
+
+		return $value === ''
+			? NULL
+			: $value;
+	}
+
+	/**
 	 * Checks if a field is set.
 	 *
 	 * Modified version of Validate::not_empty, accepts values that

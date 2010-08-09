@@ -1099,6 +1099,12 @@ abstract class Mango_Core implements Mango_Interface {
 				$data->callback($name,array($this,'_is_unique'));
 			}
 
+			// xss clean of strings
+			if ( $field['type'] === 'string' && isset($field['xss_clean']) && isset($data[$name]))
+			{
+				$data->filter($name,'Validate::xss_clean');
+			}
+
 			// filters contained in field spec
 			if ( isset($field['filters']))
 			{
