@@ -39,6 +39,26 @@ class Mango_Validate extends Kohana_Validate {
 	}
 
 	/**
+	 * Tests if a number has a minimum value.
+	 *
+	 * @return  boolean
+	 */
+	public static function min_value($number, $min)
+	{
+		return $number >= $min;
+	}
+
+	/**
+	 * Tests if a number has a maximum value.
+	 *
+	 * @return  boolean
+	 */
+	public static function max_value($number, $max)
+	{
+		return $number <= $max;
+	}
+
+	/**
 	 * Removes a field, and all its rules/filters/callbacks & label from Validate object
 	 */
 	public function offsetUnset($field)
