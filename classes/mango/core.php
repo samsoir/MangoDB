@@ -805,9 +805,12 @@ abstract class Mango_Core implements Mango_Interface {
 	/**
 	 * Create a new document using the current data.
 	 *
+	 * @param   array|boolean|integer   options array or value for 'safe' (true/false/replication integer)
+	 *                                  see: http://www.php.net/manual/en/mongocollection.insert.php
 	 * @return  $this
+	 * @throws  Mango_Exception   Creating failed
 	 */
-	public function create()
+	public function create($safe = TRUE)
 	{
 		if ( $this->_embedded)
 		{
@@ -817,17 +820,19 @@ abstract class Mango_Core implements Mango_Interface {
 
 		if ( $values = $this->changed(FALSE))
 		{
-			// insert - MongoDB driver will generate unique _id value (if missing)
-			$this->db()->insert($this->_collection, $values);
+			$options = is_array($safe)
+				? $safe
+				: array('safe' => $safe);
 
-			// check for success
-			$err = $this->db()->last_error();
-
-			if ( $err['err'])
+			try
 			{
-				// Something went wrong - throw error
+				// insert - MongoDB driver will generate unique _id value (if missing)
+				$this->db()->insert($this->_collection, $values, $options);
+			}
+			catch ( MongoCursorException $e)
+			{
 				throw new Mango_Exception('Unable to create :model, database returned error :error',
-					array(':model' => $this->_model, ':error' => $err['err']));
+					array(':model' => $this->_model, ':error' => $e->getMessage()));
 			}
 
 			if ( ! isset($this->_object['_id']))
@@ -846,9 +851,12 @@ abstract class Mango_Core implements Mango_Interface {
 	 * Update the current document using the current data.
 	 *
 	 * @param   array  Additional criteria for update
+	 * @param   array|boolean|integer   options array or value for 'safe' (true/false/replication integer)
+	 *                                  see: http://www.php.net/manual/en/mongocollection.insert.php
 	 * @return  $this
+	 * @throws  Mango_Exception   Updating failed
 	 */
-	public function update( $criteria = array() )
+	public function update( $criteria = array(), $safe = TRUE)
 	{
 		if ( $this->_embedded)
 		{
@@ -860,7 +868,17 @@ abstract class Mango_Core implements Mango_Interface {
 		{
 			$criteria['_id'] = $this->_id;
 
-			$this->db()->update($this->_collection, $criteria, $values, FALSE);
+			$options = is_array($safe) ? $safe : array('safe' => $safe);
+
+			try
+			{
+				$this->db()->update($this->_collection, $criteria, $values, $options);
+			}
+			catch ( MongoCursorException $e)
+			{
+				throw new Mango_Exception('Unable to update :model, database returned error :error',
+					array(':model' => $this->_model, ':error' => $e->getMessage()));
+			}
 
 			$this->saved();
 		}
@@ -871,9 +889,11 @@ abstract class Mango_Core implements Mango_Interface {
 	/**
 	 * Delete the current document using the current data.
 	 *
+	 * @param   array|boolean|integer   options array or value for 'safe' (true/false/replication integer)
+	 *                                  see: http://www.php.net/manual/en/mongocollection.remove.php
 	 * @return  $this
 	 */
-	public function delete()
+	public function delete($safe = FALSE)
 	{
 		if ( $this->_embedded)
 		{
@@ -897,12 +917,12 @@ abstract class Mango_Core implements Mango_Interface {
 			switch ( $relation['type'])
 			{
 				case 'has_one':
-					$this->__get($name)->delete();
+					$this->__get($name)->delete($safe);
 				break;
 				case 'has_many':
 					foreach ( $this->__get($name) as $hm)
 					{
-						$hm->delete();
+						$hm->delete($safe);
 					}
 				break;
 				case 'has_and_belongs_to_many':
@@ -916,7 +936,17 @@ abstract class Mango_Core implements Mango_Interface {
 			}
 		}
 
-		$this->db()->remove($this->_collection, array('_id'=>$this->_id), FALSE);
+		$options = is_array($safe) ? $safe : array('safe' => $safe);
+
+		try
+		{
+			$this->db()->remove($this->_collection, array('_id'=> $this->_id), $options);
+		}
+		catch ( MongoCursorException $e)
+		{
+			throw new Mango_Exception('Unable to remove :model, database returned error :error',
+				array(':model' => $this->_model, ':error' => $e->getMessage()));
+		}
 
 		return $this;
 	}

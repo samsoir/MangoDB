@@ -139,9 +139,9 @@ class MangoDB {
 			: NULL;
 	}
 
-	public function ensure_index ( $collection_name, $keys )
+	public function ensure_index ( $collection_name, $keys, $options )
 	{
-		return $this->_db->selectCollection($collection_name)->ensureIndex($keys);
+		return $this->_db->selectCollection($collection_name)->ensureIndex($keys, $options);
 	}
 
 	public function command( array $data)
@@ -231,26 +231,28 @@ class MangoDB {
 		), $newObj);
 	}
 
-	public function insert($collection_name, array $a)
+	public function insert($collection_name, array $a, $options = array())
 	{
 		return $this->_call('insert', array(
-			'collection_name' => $collection_name
+			'collection_name' => $collection_name,
+			'options'         => $options
 		), $a);
 	}
 
-	public function remove($collection_name, array $criteria, $justOne = FALSE)
+	public function remove($collection_name, array $criteria, $options = array())
 	{
 		return $this->_call('remove', array(
 			'collection_name' => $collection_name,
 			'criteria'        => $criteria,
-			'justOne'         => $justOne
+			'options'         => $options
 		));
 	}
 
-	public function save($collection_name, array $a)
+	public function save($collection_name, array $a, $options = array())
 	{
 		return $this->_call('save', array(
-			'collection_name' => $collection_name
+			'collection_name' => $collection_name,
+			'options'         => $options
 		), $a);
 	}
 
@@ -365,13 +367,13 @@ class MangoDB {
 				$r = $c->update($criteria, $values, $options);
 			break;
 			case 'insert':
-				$r = $c->insert($values);
+				$r = $c->insert($values, $options);
 			break;
 			case 'remove':
-				$r = $c->remove($criteria,$justOne);
+				$r = $c->remove($criteria,$options);
 			break;
 			case 'save':
-				$r = $c->save($values);
+				$r = $c->save($values, $options);
 			break;
 			case 'get_file':
 				$r = $this->gridFS()->findOne($criteria);
