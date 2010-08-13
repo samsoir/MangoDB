@@ -139,11 +139,6 @@ class MangoDB {
 			: NULL;
 	}
 
-	public function ensure_index ( $collection_name, $keys, $options )
-	{
-		return $this->_db->selectCollection($collection_name)->ensureIndex($keys, $options);
-	}
-
 	public function command( array $data)
 	{
 		return $this->_call('command', array(), $data);
@@ -173,6 +168,15 @@ class MangoDB {
 	{
 		return $this->_call('drop_collection', array(
 			'name' => $name
+		));
+	}
+
+	public function ensure_index ( $collection_name, $keys, $options = array())
+	{
+		return $this->_call('ensure_index', array(
+			'collection_name' => $collection_name,
+			'keys'            => $keys,
+			'options'         => $options
 		));
 	}
 
@@ -336,6 +340,8 @@ class MangoDB {
 
 		switch ( $command)
 		{
+			case 'ensure_index':
+				$r = $c->ensure_index($keys, $options);
 			case 'create_collection':
 				$r = $this->_db->createCollection($name,$capped,$size,$max);
 			break;
