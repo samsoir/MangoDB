@@ -1185,6 +1185,12 @@ abstract class Mango_Core implements Mango_Interface {
 					$value = new MongoId($value);
 				}
 			break;
+			case 'date':
+				if ( ! $value instanceof MongoDate)
+				{
+					$value = new MongoDate( is_int($value) ? $value : strtotime($value));
+				}
+			break;
 			case 'enum':
 				if ( is_numeric($value) && (int) $value == $value)
 				{
