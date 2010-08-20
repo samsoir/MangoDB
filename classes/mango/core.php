@@ -395,8 +395,6 @@ abstract class Mango_Core implements Mango_Interface {
 				return;
 			}
 
-			//echo 'Setting:  ' . $name . ' to ' . (is_object($value) ? get_class($value) : $value) . ' in ' . $this->_model . '<bR>';
-
 			// update object
 			$this->_object[$name] = $value;
 
@@ -576,8 +574,6 @@ abstract class Mango_Core implements Mango_Interface {
 
 		foreach ($values as $field => $value)
 		{
-			//echo 'values as: ' .  ($clean ? 'TRUE' : 'FALSE') . ' in: ' . $field . ' to ' . (is_object($value) ? get_class($value) : $value) . ' in ' . $this->_model .'<br>';
-
 			if ( $clean === TRUE)
 			{
 				// Set the field directly
