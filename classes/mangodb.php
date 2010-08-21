@@ -7,7 +7,7 @@ class MangoDB {
 
 	public static function instance($name = 'default', array $config = NULL)
 	{
-		if( ! isset(self::$instances[$name]) )
+		if ( ! isset(self::$instances[$name]))
 		{
 			if ($config === NULL)
 			{
@@ -58,39 +58,45 @@ class MangoDB {
 
 	public function connect()
 	{
-		if ($this->_connection)
+		if ( $this->_connection)
 		{
 			return;
 		}
 
-		// Extract the connection parameters, adding required variabels
-		extract($this->_config + array(
-			'hostnames'  => NULL,
-			'persistent' => FALSE,
-			'paired'     => FALSE
+		// Extract the connection parameters, adding required variables
+		extract($this->_config['connection'] + array(
+			'hostnames'  => 'localhost:27017'
 		));
 
 		// Clear the connection parameters for security
 		unset($this->_config['connection']);
 
-		// Create connection object
-		$this->_connection = new Mongo($hostnames, FALSE, $persistent, $paired);
+		if ( isset($username) && isset($password))
+		{
+			// Add Username & Password to server string
+			$hostnames = $username . ':' . $password . '@' . $hostnames;
+		}
 
-		// Set the connection type
-		$connect = $persistent 
-			? ($paired 
-					? 'pairPersistConnect' 
-					: 'persistConnect'
-				)
-			: ($paired 
-					? 'pairConnect' 
-					: 'connect'
-				);
+		if ( strpos($hostnames, 'mongodb://') !== 0)
+		{
+			// Add required 'mongodb://' prefix
+			$hostnames = 'mongodb://' . $hostnames;
+		}
+
+		if ( ! isset($options))
+		{
+			$options = array();
+		}
+
+		// We connect below in a separate try catch
+		$options['connect'] = FALSE;
+
+		// Create connection object
+		$this->_connection = new Mongo($hostnames, $options);
 
 		try
 		{
-			// Try to connect to the database server
-			$this->_connection->$connect();
+			$this->_connection->connect();
 		}
 		catch ( MongoConnectionException $e)
 		{
@@ -99,7 +105,12 @@ class MangoDB {
 				array(':hostnames' => $e->getMessage()));
 		}
 
-		$this->_db = $this->_connection->selectDB($this->_config['database']);
+		if ( ! isset($database))
+		{
+			throw new Kohana_Exception('No database specified in MangoDB Config');
+		}
+
+		$this->_db = $this->_connection->selectDB($database);
 
 		return $this->_connected = TRUE;
 	}
@@ -112,8 +123,6 @@ class MangoDB {
 		}
 
 		$this->_db = $this->_connection = NULL;
-
-		$this->_collections = array();
 	}
 
 	/* Database Management */
