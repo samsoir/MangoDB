@@ -2,6 +2,8 @@
 
 class Mango_Validate extends Kohana_Validate {
 
+	protected $_empty_rules = array('not_empty', 'matches', 'required');
+
 	/**
 	 * XSS Clean Filter
 	 *
