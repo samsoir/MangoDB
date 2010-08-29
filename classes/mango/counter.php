@@ -3,12 +3,12 @@
 class Mango_Counter implements Mango_Interface {
 
 	/**
-	 * @var   int   Current value of counter
+	 * @var   float   Current value of counter
 	 */
 	protected $_value = 0;
 
 	/**
-	 * @var   int   Value added to/substracted from counter
+	 * @var   float   Value added to/substracted from counter
 	 */
 	protected $_changed = 0;
 
@@ -24,7 +24,7 @@ class Mango_Counter implements Mango_Interface {
 
 		if ( is_numeric($value))
 		{
-			$this->_value = (int) $value;
+			$this->_value = (float) $value;
 		}
 	}
 
