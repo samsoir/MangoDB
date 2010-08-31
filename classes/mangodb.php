@@ -351,6 +351,7 @@ class MangoDB {
 		{
 			case 'ensure_index':
 				$r = $c->ensureIndex($keys, $options);
+			break;
 			case 'create_collection':
 				$r = $this->_db->createCollection($name,$capped,$size,$max);
 			break;
