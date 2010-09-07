@@ -297,27 +297,29 @@ class MangoDB {
 		));
 	}
 
-	public function set_file_bytes($bytes, array $extra = array())
+	public function set_file_bytes($bytes, array $extra = array(), array $options = array())
 	{
 		return $this->_call('set_file_bytes', array(
-			'bytes' => $bytes,
-			'extra' => $extra
+			'bytes'   => $bytes,
+			'extra'   => $extra,
+			'options' => $options
 		));
 	}
 
-	public function set_file($filename, array $extra = array())
+	public function set_file($filename, array $extra = array(), array $options = array())
 	{
 		return $this->_call('set_file', array(
 			'filename' => $filename,
-			'extra'    => $extra
+			'extra'    => $extra,
+			'options'  => $options
 		));
 	}
 
-	public function remove_file( array $criteria = array(), $justOne = FALSE)
+	public function remove_file( array $criteria = array(), array $options = array())
 	{
 		return $this->_call('remove_file', array(
 			'criteria' => $criteria,
-			'justOne'  => $justOne
+			'options'  => $options
 		));
 	}
 
@@ -395,13 +397,13 @@ class MangoDB {
 				$r = $this->gridFS()->findOne($criteria);
 			break;
 			case 'set_file_bytes':
-				$r = $this->gridFS()->storeBytes($bytes,$extra);
+				$r = $this->gridFS()->storeBytes($bytes, $extra, $options);
 			break;
 			case 'set_file':
-				$r = $this->gridFS()->storeFile($filename,$extra);
+				$r = $this->gridFS()->storeFile($filename, $extra, $options);
 			break;
 			case 'remove_file':
-				$r = $this->gridFS()->remove($criteria, $justOne);
+				$r = $this->gridFS()->remove($criteria, $options);
 			break;
 		}
 
