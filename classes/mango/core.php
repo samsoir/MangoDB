@@ -599,7 +599,29 @@ abstract class Mango_Core implements Mango_Interface {
 	{
 		$array = array();
 
-		foreach ( $this->_object as $name => $value)
+		foreach ( $this->_fields as $field_name => $field_data)
+		{
+			if ( isset($this->_object[$field_name]))
+			{
+				if ( $clean && isset($field_data['default']) && $field_data['default'] === $this->__get($field_name))
+				{
+					// no need to store value in DB if it's identical to the default value
+					continue;
+				}
+
+				$value = $clean
+					? $this->_object[$field_name]
+					: $this->__get($field_name);
+
+				$array[ $field_name ] = Mango::normalize( $value, $clean );
+			}
+			else if ( ! $clean && isset($field_data['default']))
+			{
+				$array[ $field_name ] = $field_data['default'];
+			}
+		}
+
+		/*foreach ( $this->_object as $name => $value)
 		{
 			if ( $value instanceof Mango_Interface)
 			{
@@ -617,7 +639,7 @@ abstract class Mango_Core implements Mango_Interface {
 					? (string) $value
 					: $this->__get($name);
 			}
-		}
+		}*/
 
 		return count($array) || ! $clean
 			? $array
@@ -1500,17 +1522,20 @@ abstract class Mango_Core implements Mango_Interface {
 	 * (comparing two identical objects in PHP will return FALSE)
 	 *
 	 * @param   mixed   value to normalize
+	 * @param   boolean whether to clean data (see Mango::as_array)
 	 * @return  mixed   normalized value
 	 */
-	public static function normalize($value)
+	public static function normalize($value, $clean = FALSE)
 	{
 		if ( $value instanceof Mango_Interface)
 		{
-			return $value->as_array( FALSE );
+			return $value->as_array( $clean );
 		}
 		elseif ( $value instanceof MongoId)
 		{
-			return (string) $value;
+			return $clean
+				? $value
+				: (string) $value;
 		}
 		else
 		{
