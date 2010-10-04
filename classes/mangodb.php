@@ -297,6 +297,14 @@ class MangoDB {
 		));
 	}
 
+	public function get_files(array $query = array(), array $fields = array())
+	{
+		return $this->_call('get_files', array(
+			'query'  => $query,
+			'fields' => $fields
+		));
+	}
+
 	public function set_file_bytes($bytes, array $extra = array(), array $options = array())
 	{
 		return $this->_call('set_file_bytes', array(
@@ -395,6 +403,9 @@ class MangoDB {
 			break;
 			case 'get_file':
 				$r = $this->gridFS()->findOne($criteria);
+			break;
+			case 'get_files':
+				$r = $this->gridFS()->find($query, $fields);
 			break;
 			case 'set_file_bytes':
 				$r = $this->gridFS()->storeBytes($bytes, $extra, $options);
