@@ -836,6 +836,12 @@ abstract class Mango_Core implements Mango_Interface {
 				array(':name' => $this->_model));
 		}
 
+		if ( ! isset($this->_id))
+		{
+			// Generate MongoId
+			$this->_id = new MongoId;
+		}
+
 		if ( $values = $this->changed(FALSE))
 		{
 			$options = is_array($safe)
@@ -844,19 +850,13 @@ abstract class Mango_Core implements Mango_Interface {
 
 			try
 			{
-				// insert - MongoDB driver will generate unique _id value (if missing)
+				// insert
 				$this->db()->insert($this->_collection, $values, $options);
 			}
 			catch ( MongoCursorException $e)
 			{
 				throw new Mango_Exception('Unable to create :model, database returned error :error',
 					array(':model' => $this->_model, ':error' => $e->getMessage()));
-			}
-
-			if ( ! isset($this->_object['_id']))
-			{
-				// Store (generated) MongoID in object
-				$this->_object['_id'] = $this->load_field('_id',$values['_id']);
 			}
 
 			$this->saved();

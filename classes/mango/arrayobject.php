@@ -1,22 +1,22 @@
 <?php
 
-/*
+/**
  * ArrayObject base class used by both Mango_Set (corresponds to Javascript array) and Mango_Array (corresponds to Javascript object)
  */
 
 class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 
-	/*
+	/**
 	 * Remembers changes made to this array object (for updating)
 	 */
 	protected $_changed = array();
 
-	/*
+	/**
 	 * Stores the type of value stored in this array object
 	 */
 	protected $_type_hint;
 
-	/*
+	/**
 	 * Constructor
 	 *
 	 * @param   array   Current data
@@ -48,12 +48,12 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 	}
 
-	/*
+	/**
 	 * Returns an array with changes - implemented by child classes
 	 */
 	public function changed($update, array $prefix = array()) {}
 
-	/*
+	/**
 	 * Ensures all values are of correct type
 	 */
 	public function load()
@@ -65,7 +65,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 	}
 
-	/*
+	/**
 	 * Loads a value into correct type
 	 */
 	public function load_type($value)
@@ -102,7 +102,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $value;
 	}
 
-	/*
+	/**
 	 * Returns object as array
 	 */
 	public function getArrayCopy()
@@ -110,7 +110,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $this->as_array();
 	}
 
-	/*
+	/**
 	 * Returns object as array
 	 *
 	 * @param   boolean  fetch value directly from object
@@ -131,7 +131,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $array;
 	}
 
-	/*
+	/**
 	 * Set status to saved
 	 */
 	public function saved()
@@ -147,7 +147,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 	}
 
-	/*
+	/**
 	 * Fetch value
 	 */
 	public function offsetGet($index)
@@ -181,7 +181,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return parent::offsetGet($index);
 	}
 
-	/*
+	/**
 	 * Set key to value
 	 */
 	public function offsetSet($index,$newval)
@@ -206,33 +206,49 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		// on $array[], the $index newval === NULL
 		if ( $index === NULL)
 		{
-			$index = $this->find($newval);
+			// find index of last occurence of $newval
+			$index = $this->find($newval, -1);
 		}
 
 		return $index;
 	}
 
-	/*
-	 * Find index of value in array object
+	/**
+	 * Find index of n'th occurence of value in array
+	 *
+	 * @param   mixed         Needle
+	 * @param   int           n'th occurence (negative = count from end)
+	 * @return  int|boolean   index of n'th occurence of needle, or FALSE
 	 */
-	public function find($needle)
+	public function find($needle, $n = 1)
 	{
 		// normalize needle
 		$needle = Mango::normalize($needle);
+
+		$occurences = array();
 
 		// try all keys
 		foreach ( $this as $key => $val)
 		{
 			if ( Mango::normalize($val) === $needle)
 			{
-				// found
-				return $key;
+				if ( count($occurences) === $n)
+				{
+					return $key;
+				}
+				else
+				{
+					array_unshift($occurences, $key);
+				}
 			}
 		}
-		return FALSE;
+
+		return $n < 0 && isset($occurences[ $n * -1 - 1 ])
+			? $occurences[$n * -1 - 1]
+			: FALSE;
 	}
 
-	/*
+	/**
 	 * Create an (associative) array of values from this array object
 	 *
 	 * $blog->comments->select_list('id','author');
@@ -267,7 +283,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $list;
 	}
 
-	/*
+	/**
 	 * Push a value onto array, similar to $array[]
 	 */
 	public function push($newval)
@@ -275,7 +291,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		return $this->offsetSet(NULL,$newval);
 	}
 
-	/*
+	/**
 	 * Pull a value from array
 	 */
 	public function pull($oldval)
@@ -289,7 +305,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	}
 
 
-	/*
+	/**
 	 * Find a path in array
 	 *
 	 * @param   string|array  delimiter notated keystring or array
