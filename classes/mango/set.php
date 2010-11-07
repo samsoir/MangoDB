@@ -149,12 +149,9 @@ class Mango_Set extends Mango_ArrayObject {
 		// Some modifiers don't work well together in Mongo - check for mistakes
 		if ( isset($this->_mode) && $this->_mode !== 'set' && $this->_mode !== 'unset' && ! empty($changes_children))
 		{
-			if ( ! empty($changes_children))
-			{
-				throw new Mango_Exception('MongoDB does not support any other updates when already in :mode mode', array(
-					':mode' => $this->_mode
-				));
-			}
+			throw new Mango_Exception('MongoDB does not support any other updates when already in :mode mode', array(
+				':mode' => $this->_mode
+			));
 		}
 
 		// Return all changes
