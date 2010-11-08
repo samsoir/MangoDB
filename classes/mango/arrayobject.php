@@ -220,32 +220,29 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	 * @param   int           n'th occurence (negative = count from end)
 	 * @return  int|boolean   index of n'th occurence of needle, or FALSE
 	 */
-	public function find($needle, $n = 1)
+	public function find($needle, $n = 0)
 	{
 		// normalize needle
-		$needle = Mango::normalize($needle);
+		$needle   = Mango::normalize($needle);
 
-		$occurences = array();
-
-		// try all keys
+		// create normalized haystack
+		$haystack = array();
 		foreach ( $this as $key => $val)
 		{
-			if ( Mango::normalize($val) === $needle)
-			{
-				if ( count($occurences) === $n)
-				{
-					return $key;
-				}
-				else
-				{
-					array_unshift($occurences, $key);
-				}
-			}
+			$haystack[$key] = Mango::normalize($val);
 		}
 
-		return $n < 0 && isset($occurences[ $n * -1 - 1 ])
-			? $occurences[$n * -1 - 1]
-			: FALSE;
+		// perform search
+		$keys = array_keys($haystack, $needle);
+
+		if ( $n < 0 )
+		{
+			// reverse array and $n
+			$keys = array_reverse($keys);
+			$n = $n * -1 - 1;
+		}
+
+		return isset($keys[$n]) ? $keys[$n] : FALSE;
 	}
 
 	/**
