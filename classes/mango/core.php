@@ -343,7 +343,12 @@ abstract class Mango_Core implements Mango_Interface {
 					break;
 				}
 
-				$this->_related[$name] = Mango::factory($relation['model'])->load($limit, NULL, NULL, array(), $criteria);
+				$parameters = array(
+					'limit'    => $limit,
+					'criteria' => $criteria
+				);
+
+				$this->_related[$name] = Mango::factory($relation['model'])->load( $parameters );
 			}
 
 			return $this->_related[$name];
@@ -765,6 +770,11 @@ abstract class Mango_Core implements Mango_Interface {
 	/**
 	 * Load a (set of) document(s) from the database
 	 *
+	 * Instead of listing all parameters individually, you can also supply a array, eg
+	 * ->load( array( 'limit' => 1, 'criteria' => array(...));
+	 * instead of
+	 * ->load(1, NULL, NULL, array(), array(...));
+	 *
 	 * @param   mixed  limit the (maximum) number of models returned
 	 * @param   array  sorts models on specified fields array( field => 1/-1 )
 	 * @param   int    skip a number of results
@@ -781,6 +791,15 @@ abstract class Mango_Core implements Mango_Interface {
 		}
 
 		$criteria += $this->changed(FALSE);
+
+		// parameters can also be supplied in an array (instead of each parameter individually)
+		if ( is_array($limit))
+		{
+			// add default value for $limit, and extract values
+			extract($limit + array(
+				'limit'    => 1
+			));
+		}
 
 		// resets $this->_changed array
 		$this->clear();
