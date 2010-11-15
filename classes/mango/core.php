@@ -98,6 +98,11 @@ abstract class Mango_Core implements Mango_Interface {
 	protected $_embedded = FALSE;
 
 	/**
+	 * @var  Mango   reference to parent object
+	 */
+	protected $_parent;
+
+	/**
 	 * @var  array  field list (name => field data)
 	 */
 	protected $_fields = array();
@@ -260,6 +265,40 @@ abstract class Mango_Core implements Mango_Interface {
 		}
 
 		return $this->__get('_id')->getTimestamp();
+	}
+
+	/**
+	 * Store a reference of the parent object (this is done by Mango internally)
+	 *
+	 * @param   Object   parent object
+	 * @return  this
+	 */
+	protected function set_parent( Mango & $parent)
+	{
+		if ( ! $this->_embedded)
+		{
+			throw new Mango_Exception('Only embedded documents have a parent document');
+		}
+
+		$this->_parent = $parent;
+
+		return $this;
+	}
+
+	/**
+	 * Return reference to parent object
+	 *
+	 * @return   Object   parent object
+	 * @throws   only embedded objects have a parent object
+	 */
+	public function get_parent()
+	{
+		if ( ! $this->_embedded)
+		{
+			throw new Mango_Exception('Only embedded documents have a parent document');
+		}
+
+		return $this->_parent;
 	}
 
 	/**
@@ -1262,7 +1301,7 @@ abstract class Mango_Core implements Mango_Interface {
 			case 'has_one':
 				if ( is_array($value))
 				{
-					$value = Mango::factory($field['model'], $value, Mango::CLEAN);
+					$value = Mango::factory($field['model'], $value, Mango::CLEAN)->set_parent($this);
 				}
 
 				if ( ! $value instanceof Mango)
@@ -1272,6 +1311,11 @@ abstract class Mango_Core implements Mango_Interface {
 			break;
 			case 'has_many':
 				$value = new Mango_Set($value, $field['model'], ! isset($field['unique']) ? TRUE : $field['unique']);
+
+				foreach ( $value as $model)
+				{
+					$model->set_parent($this);
+				}
 			break;
 			case 'counter':
 				$value = new Mango_Counter($value);
