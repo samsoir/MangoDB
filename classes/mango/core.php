@@ -416,26 +416,29 @@ abstract class Mango_Core implements Mango_Interface {
 
 		if ( isset($this->_fields[$name]))
 		{
-			$value = $this->load_field($name,$value);
+			$match_default = isset($this->_fields[$name]['default'])
+				? $value === $this->_fields[$name]['default']
+				: FALSE;
+
+			$value = $this->load_field($name, $value);
 
 			if ( isset($this->_object[$name]))
 			{
-				// Unset field if setting existing field to NULL
-				if ( $value === NULL)
+				if ( $value === NULL || $match_default)
 				{
+					// setting existing field to NULL / default value -> unset value
 					return $this->__unset($name);
 				}
 
 				// don't update value if the value did not change
-				$current = $this->_object[$name];
-
-				if ( Mango::normalize($current) === Mango::normalize($value))
+				if ( Mango::normalize($this->_object[$name]) === Mango::normalize($value))
 				{
 					return FALSE;
 				}
 			}
-			elseif ( $value === NULL || $value === '')
+			elseif ( $value === NULL || $value === '' || $match_default)
 			{
+				// setting unset field to NULL / empty string / default value -> nothing happens
 				return;
 			}
 
@@ -647,12 +650,6 @@ abstract class Mango_Core implements Mango_Interface {
 		{
 			if ( isset($this->_object[$field_name]))
 			{
-				if ( $clean && isset($field_data['default']) && $field_data['default'] === $this->__get($field_name))
-				{
-					// no need to store value in DB if it's identical to the default value
-					continue;
-				}
-
 				$value = $clean
 					? $this->_object[$field_name]
 					: $this->__get($field_name);
@@ -664,26 +661,6 @@ abstract class Mango_Core implements Mango_Interface {
 				$array[ $field_name ] = $field_data['default'];
 			}
 		}
-
-		/*foreach ( $this->_object as $name => $value)
-		{
-			if ( $value instanceof Mango_Interface)
-			{
-				$array[$name] = $value->as_array( $clean );
-			}
-			elseif ( $clean)
-			{
-				// direct from _object, for saving (enums numbers)
-				$array[$name] = $value;
-			}
-			else
-			{
-				// user friendlier value, for displaying (string _IDs, enum values)
-				$array[$name] = $value instanceof MongoId
-					? (string) $value
-					: $this->__get($name);
-			}
-		}*/
 
 		return count($array) || ! $clean
 			? $array
