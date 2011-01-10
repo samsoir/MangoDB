@@ -1010,9 +1010,10 @@ abstract class Mango_Core implements Mango_Interface {
 	 * @throws  Validate_Exception  when an error is found
 	 * @param   array    data to check, defaults to current document data (including embedded documents)
 	 * @param   subject  specify what part of $data should be subjected to validation, Mango::CHECK_FULL, Mango::CHECK_LOCAL, Mango::CHECK_ONLY
+	 * @param   boolean  validate empty arrays
 	 * @return  array    validated $data
 	 */
-	public function check(array $data = NULL, $subject = 0)
+	public function check(array $data = NULL, $subject = 0, $allow_empty = FALSE)
 	{
 		if ( $data === NULL )
 		{
@@ -1062,7 +1063,7 @@ abstract class Mango_Core implements Mango_Interface {
 			}
 
 			// Validate
-			if ( ! $array->check())
+			if ( ! $array->check( $allow_empty ))
 			{
 				// Validation failed
 				throw new Mango_Validate_Exception($this->_model,$array);
@@ -1086,7 +1087,7 @@ abstract class Mango_Core implements Mango_Interface {
 				if ( $this->_fields[$field]['type'] === 'has_one')
 				{
 					$values[$field] = Mango::factory($this->_fields[$field]['model'], $value, Mango::EXTEND)
-						->check($value, $subject);
+						->check($value, $subject, $allow_empty);
 				}
 				elseif ( $this->_fields[$field]['type'] === 'has_many')
 				{
@@ -1098,7 +1099,7 @@ abstract class Mango_Core implements Mango_Interface {
 	
 						try
 						{
-							$val[$k] = $model->check($v, $subject);
+							$val[$k] = $model->check($v, $subject, $allow_empty);
 						}
 						catch ( Mango_Validate_Exception $e)
 						{
