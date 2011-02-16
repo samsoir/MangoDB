@@ -191,10 +191,11 @@ class MangoDB {
 
 	/* Data Management */
 
-	public function batch_insert ( $collection_name, array $a )
+	public function batch_insert ( $collection_name, array $a, array $options = array() )
 	{
 		return $this->_call('batch_insert', array(
-			'collection_name' => $collection_name
+			'collection_name' => $collection_name,
+			'options'         => $options
 		), $a);
 	}
 
@@ -375,7 +376,7 @@ class MangoDB {
 				$r = $this->_db->execute($code,$args);
 			break;
 			case 'batch_insert':
-				$r = $c->batchInsert($values);
+				$r = $c->batchInsert($values, $options);
 			break;
 			case 'count':
 				$r = $c->count($query);
